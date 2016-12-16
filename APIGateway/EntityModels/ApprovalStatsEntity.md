@@ -16,8 +16,8 @@ Represents the current state of the work for the current client.
 
 ```json
 {
-    "approvedCount": 121212
-    "declinedCount": 212121
+    "approvedCount": 121212,
+    "declinedCount": 212121,
     "pendingCount": 42
 }
 ```
