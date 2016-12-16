@@ -68,7 +68,7 @@ __QueryString Parameters:__
 
 __Returns:__ _ApprovalListEntity_
 
-## GET /jobs/{jobId}/approval/
+## GET /jobs/{jobId}/approvals/
 
 Retrieve a single approval record for the given jobId.
 
