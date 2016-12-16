@@ -1,0 +1,37 @@
+# FinalizeRequestEntity
+
+Represents the response to a FinalizeItemRequest.
+
+## Fields:
+
+| Field Name   | Field Type | Default Value | Description                                                                                                       |
+| ------------ | ---------- | ------------- | --------------------------------------------------------------------------- |
+| jobId        | STRING     | _REQUIRED_    | The jobId that was altered in the FinalizeItemRequest.                      |
+| success      | BOOLEAN    | _REQUIRED_    | A flag indicating if the operation was successfull or not.                  |
+| message      | STRING     | _REQUIRED_    | A message that describes the result or error message about a failed result. |
+
+## Example JSON
+
+### Example 1
+
+A successfull result.
+
+```json
+{
+    "jobId": "VE20161216abcdefg",
+    "success": true,
+    "message": "Completed successfully"
+}
+```
+
+### Example 2
+
+A failed result.
+
+```json
+{
+    "jobId": "VE20161216abcdefg",
+    "success": false,
+    "message": "Details about the failure."
+}
+```

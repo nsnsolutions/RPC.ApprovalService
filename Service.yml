@@ -1,0 +1,30 @@
+# Here be a service
+---
+name: RPC.ApprovalService
+version: 1.0.0
+description: Manage the approval process for jobs.
+
+main: src/index.js
+
+configurations:
+  - name: fixed
+    value:
+        defaultName: World
+
+  # You can specify etcd nodes here. The key must exist or the service will fail
+  # to start. You can optionally tell the service to raise a onConfigChanged
+  # event with the watch argument.
+  #
+  # You can also setup a static config by providing value and omitting the
+  # etcd key.
+  #
+  # ETCD Example:
+  # - name: service
+  #   key: /config/services/RPC_ApprovalService
+  #   watch: true
+  # 
+  # STATIC Example:
+  # - name: fixed
+  #   value:
+  #       foo: bar
+  #       baz: qux
