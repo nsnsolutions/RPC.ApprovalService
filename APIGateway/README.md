@@ -68,7 +68,7 @@ __QueryString Parameters:__
 
 __Returns:__ _ApprovalListEntity_
 
-## GET /jobs/{jobId}/approvals/
+## GET /jobs/{jobId}/approval/
 
 Retrieve a single approval record for the given jobId.
 
@@ -78,7 +78,7 @@ __Request Headers:__
 
 __Returns:__ _ApprovalEntity_
 
-## POST /jobs/{jobId}/approvals/
+## POST /jobs/{jobId}/approval/
 
 Set the approval disposition on a specific job record.
 
