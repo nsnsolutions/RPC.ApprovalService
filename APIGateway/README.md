@@ -89,3 +89,77 @@ __Request Headers:__
 __Body:__ _FinalizeRequestItemEntity_
 
 __Returns:__ _FinalizeReponseItemEntity_
+
+# FilterBy
+
+Some urls accept filter information in a querystring named __filterBy__.  These
+filters can be applied to multiple fields at the same time using various
+operations.
+
+This section describes the filterby structure.
+
+## FilterBy Structure
+
+The basic structure for a filterBy string is
+
+```
+FIELD:OPERATOR:VALUES
+```
+
+Multiple filters can be placed into the query string separated by a semicolon
+(`;`).
+
+```
+FIELD1:OPERATOR1:VALUES1;FIELD2:OPERATOR2:VALUES2
+```
+
+For operators that supports multiple values, such as a `IN` operation, use a comma (`,`) between each relevant value.
+
+```
+FIELD:OPERATOR:VALUE1,VALUE2,VALUE3
+```
+
+## FilterBy Operators
+
+The system currently supports 3 operations:
+
+- EQ: A Equality operation.  The value in FIELD is equal to VALUE.
+- IN: A list comparison operation. The value in FIELD is one of the VALUES.
+- CONTAINS: A fuzy search comparison operation. The value in FIELD contains at least VALUE.
+
+## FilterBy Examples
+
+### Example 1
+
+Filter result set to items of type '_email_'.
+
+```
+?filterBy=type:EQ:email
+```
+
+### Example 2
+
+Filter result set to items of type '_email_' with a disposition of either
+'_pending_' or '_approved_'
+
+```
+?filterBy=type:EQ:email;disposition:IN:pending,approved
+```
+
+### Exmaple 3
+
+Filter result set to items of type '_email_', with a disposition of either
+'_pending_' or '_approved_', and contains the word '_specials_' in the title.
+
+
+```
+?filterBy=type:EQ:email;disposition:IN:pending,approved;title:CONTAINS:specials
+```
+
+### Example 4
+
+Filter results for approver by email.
+
+```
+?filterBy=completedBy.email:EQ:john.public@velma.com
+```
