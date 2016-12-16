@@ -24,9 +24,9 @@ The items for the first page of a multi page result set.
 {
     "jobIds": [ "VE20161216abcdefg", "VE20161216abcdefh", ... ],
     "items": [ ... ],
-    "totalCount": 45
-    "pageIndex": 0
-    "itemPerPage": 10
+    "totalCount": 45,
+    "pageIndex": 0,
+    "itemPerPage": 10,
     "approvers": [
         { "email": "johnpublic@velma.com", "fullName": "John Public" }
     ]
@@ -41,9 +41,9 @@ The items for the first page of a single page result set.
 {
     "jobIds": [ "VE20161216abcdefg", "VE20161216abcdefh" ],
     "items": [ ... ],
-    "totalCount": 2
-    "pageIndex": 0
-    "itemPerPage": 10
+    "totalCount": 2,
+    "pageIndex": 0,
+    "itemPerPage": 10,
     "approvers": [ 
         { "email": "johnpublic@velma.com", "fullName": "John Public" }
     ]
