@@ -3,7 +3,7 @@
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
 
-module.exports = function ApprovalServicePlugin(opts) {
+module.exports = function ApprovalCreatePlugin(opts) {
 
     var seneca = this,
         shared = lib.shared(seneca, opts),

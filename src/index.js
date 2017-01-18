@@ -50,7 +50,7 @@ module.exports = function RPC_ApprovalService(App) {
                 redisClient: redisClient
             };
 
-            bus.use(services.ApprovalService, params);
+            bus.use(services.ApprovalCreatePlugin, params);
 
             bus.rpcClient({ pin: "role:*" });
             bus.rpcServer({ pin: [
