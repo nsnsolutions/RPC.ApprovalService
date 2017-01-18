@@ -79,6 +79,8 @@ module.exports = function ApprovalCreatePlugin(opts) {
 
         state.raw.approvalRecord = {
             approvalId: rpcUtils.helpers.fmtUuid(),
+            sponsorIid: state.person.sponsorId,
+            clientId: state.person.clientId,
             jobId: state.get('jobId'),
             type: state.get('type'),
             jobUniqueId: state.get('jobUniqueId'),
