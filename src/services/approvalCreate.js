@@ -11,7 +11,7 @@ module.exports = function ApprovalCreatePlugin(opts) {
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:createApprovalRecord.v1', createApprovalRecord_v1);
 
-    return { name: "ApprovalServicePlugin" };
+    return { name: "ApprovalCreatePlugin" };
 
     // ------------------------------------------------------------------------
 

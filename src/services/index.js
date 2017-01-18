@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = {
-    ApprovalCreatePlugin: require('./approvalCreate')
+    ApprovalCreatePlugin: require('./approvalCreate'),
+    ApprovalMetricPlugin: require('./approvalMetric')
 };

@@ -3,5 +3,6 @@
 module.exports = {
     repr: require('./repr'),
     shared: require('./shared'),
-    disposition: require('./disposition')
+    disposition: require('./disposition'),
+    helpers: require('./helpers')
 };
