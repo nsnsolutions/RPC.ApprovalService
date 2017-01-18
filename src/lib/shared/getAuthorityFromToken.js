@@ -32,8 +32,6 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
 
         seneca.act(AUTHORITY_SERVICE, params, (err, result) => {
 
-            console.log("Got a response.");
-
             if(err)
                 return done({
                     name: "notAuthorized",
@@ -45,7 +43,9 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
                     name: "notAuthorized",
                     message: "Authorization failed: " + result.message });
 
-            state.set("person", new rpcUtils.Person(result.result));
+            var person = new rpcUtils.Person(result.result);
+            console.debug("Authority: " + person.toString());
+            state.set("person", person);
             return done(null, state);
         });
     }

@@ -42,7 +42,7 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         var params = {
             logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalEntity_v1,
+            repr: lib.repr.ApprovalStatusEntity_v1,
             name: "Fetch Sponsor Metrics (v1)",
             code: "FSM01",
             done: rpcDone
@@ -50,7 +50,8 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         params.tasks = [
             shared.getAuthorityFromToken,
-            validate
+            validate,
+            getSponsorMetrics
         ];
 
         args.set('context', 'sponsor');
@@ -83,7 +84,35 @@ module.exports = function ApprovalMetricPlugin(opts) {
             client: state.person.clientId 
         });
 
+        console.debug("Retrieving metrics with key: " + keys.client);
+
         redis.hgetall(keys.client, (err, result) => {
+            if(err) 
+                return done({
+                    name: 'internalError',
+                    message: 'Failed to retrieve metrics.' });
+
+            if(!result)
+                return done({
+                    name: 'notFound',
+                    message: 'No metrics available.' });
+
+            state.set('statusRecord', result);
+            done(null, state);
+        });
+    }
+
+    function getSponsorMetrics(console, state, done) {
+
+        console.info("Get Sponsor Metrics");
+
+        var keys = lib.helpers.makeMetricKeys({
+            sponsor: state.person.sponsorId
+        });
+
+        console.debug("Retrieving metrics with key: " + keys.sponsor);
+
+        redis.hgetall(keys.sponsor, (err, result) => {
             if(err) 
                 return done({
                     name: 'internalError',
