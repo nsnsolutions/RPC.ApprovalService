@@ -1,83 +1,64 @@
 'use strict';
 
+const AWS = require('aws-sdk');
+const redis = require('redis');
+const rpcUtils = require('rpc-utils');
 const services = require('./services');
 
 module.exports = function RPC_ApprovalService(App) {
 
+    // Simplify reference to configurations.
+    var conf = App.configurations;
+
+    // Validate Shared Configs
+    conf.service.assertMember("approvalTableName");
+
+    // Validate Service Configs.
+    conf.shared.assertMember("region");
+    conf.shared.assertMember("cacheEndpoint");
+    conf.shared.assertMember("logLevel");
+
     var app = App({
-
-        /*
-         * Called when etcd configuration changes.
-         *
-         * args:
-         *  name: name of the changed config.
-         *  config: the config object
-         */
-
         onConfigUpdate: () => app.restart(),
-
-        /*
-         * Called when the services is started
-         *
-         * args:
-         *  bus: The seneca object.
-         *  config: the service configuration defined in the yaml.
-         */
-
         onStart: bootstrap,
-
-        /*
-         * Called when the services is restarted
-         *
-         * args:
-         *  bus: The seneca object.
-         *  config: the service configuration defined in the yaml.
-         */
-
         onRestart: bootstrap,
-
-        /*
-         * Called when the services is Shutdown.
-         * Note this does not close the process. That is up you.
-         *
-         * args:
-         *  bus: The seneca object.
-         *  config: the service configuration defined in the yaml.
-         */
-
         onShutdown:() => process.exit(0)
     });
 
-    // Start the service
     app.start();
 
     // ------------------------------------------------------------------------
 
     function bootstrap(bus, conf) {
 
-        /*
-         * Rpcfw documentation:
-         * https://github.com/nsnsolutions/rpcfw/blob/master/README.md
-         *
-         * Seneca documentation:
-         * http://senecajs.org/
-         */
+        var redisClient = redis.createClient({ url: conf.shared.cacheEndpoint });
+        var dynamoClient = new AWS.DynamoDB({ region: conf.shared.region });
 
-        // Install plugins here
-        bus.use(services.HelloPlugin, conf);
+        var tableCacheParams = {
+            dynamoClient: dynamoClient,
+            redisClient: redisClient,
+            tableMap: {
+                approval: conf.service.approvalTableName 
+            }
+        };
 
-        // Start Client - If you want to call other services.
-        bus.rpcClient({ pin: "role:*" });
+        rpcUtils.CachedTable.create(tableCacheParams, (err, tables) => {
 
-        // Start Server - If you want to expose services.
-        bus.rpcServer({ pin: [
-          "role:RPC-ApprovalService",
-          "role:RPC-ApprovalService.Pub"
-        ]});
+            var params = {
+                logLevel: conf.shared.logLevel,
+                tables: tables,
+                redisClient: redisClient
+            };
 
-        bus.ready(() => {
-            if (App.isInDebugMode)
-                console.log("Visit http://localhost:10101/act?role=hello.Pub&cmd=greet.v1");
+            bus.use(services.ApprovalService, params);
+
+            bus.rpcClient({ pin: "role:*" });
+            bus.rpcServer({ pin: [
+                "role:approvalService",
+                "role:approvalService.Pub"
+            ]});
+
         });
+
     }
 }
