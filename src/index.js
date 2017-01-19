@@ -17,6 +17,7 @@ module.exports = function RPC_ApprovalService(App) {
     conf.shared.assertMember("region");
     conf.shared.assertMember("cacheEndpoint");
     conf.shared.assertMember("logLevel");
+    conf.shared.assertMember("clusterName");
 
     var app = App({
         onConfigUpdate: () => app.restart(),
@@ -45,13 +46,16 @@ module.exports = function RPC_ApprovalService(App) {
         rpcUtils.CachedTable.create(tableCacheParams, (err, tables) => {
 
             var params = {
+                env: conf.shared.clusterName,
                 logLevel: conf.shared.logLevel,
                 tables: tables,
-                redisClient: redisClient
+                redisClient: redisClient,
+                dynamoClient: dynamoClient
             };
 
             bus.use(services.ApprovalCreatePlugin, params);
             bus.use(services.ApprovalMetricPlugin, params);
+            bus.use(services.ApprovalListPlugin, params);
 
             bus.rpcClient({ pin: "role:*" });
             bus.rpcServer({ pin: [

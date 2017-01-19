@@ -6,6 +6,7 @@ const rpcUtils = require('rpc-utils');
 module.exports = function ApprovalMetricPlugin(opts) {
 
     var seneca = this,
+        env = opts.env,
         shared = lib.shared(seneca, opts),
         redis = opts.redisClient,
         logLevel = opts.logLevel;
@@ -106,7 +107,7 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         console.info("Get Sponsor Metrics");
 
-        var keys = lib.helpers.makeMetricKeys({
+        var keys = lib.helpers.makeMetricKeys(env, {
             sponsor: state.person.sponsorId
         });
 

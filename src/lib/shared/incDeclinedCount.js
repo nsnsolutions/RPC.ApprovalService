@@ -6,6 +6,7 @@ const helpers = require('../helpers');
 module.exports = function incDeclinedCount(seneca, opts) {
 
     var shared = this,
+        env = opts.env,
         approvalTable = opts.tables.approval,
         redis = opts.redisClient,
         logLevel = opts.logLevel
@@ -18,7 +19,7 @@ module.exports = function incDeclinedCount(seneca, opts) {
 
         console.info("Increment Declined Count");
 
-        var keys = helpers.makeMetricKeys({
+        var keys = helpers.makeMetricKeys(env, {
             sponsor: state.person.sponsorId,
             client: state.person.clientId });
 
