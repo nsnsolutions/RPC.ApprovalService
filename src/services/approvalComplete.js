@@ -37,7 +37,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
             fetchApprovalRecords,
             updateApprovalRecords,
             updateApprovalMetrics,
-            // TODO: Add approver to cache.
+            shared.addPersonAsApprover,
             finalizeJob
         ];
 
@@ -142,14 +142,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
                 record.comments = state.comments;
                 record.disposition = lib.disposition[state.disposition];
                 record.completeDate = rpcUtils.helpers.fmtDate();
-                record.completedBy = {
-                    sponsorId: state.person.sponsorId,
-                    clientId: state.person.clientId,
-                    userId: state.person.userId,
-                    email: state.person.email,
-                    fullName: state.person.fullName
-                };
-
+                record.completedBy = state.person;
                 record.$save({ logLevel: console.level }, (err) => {
 
                     if(err)

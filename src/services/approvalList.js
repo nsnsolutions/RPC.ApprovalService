@@ -1,7 +1,5 @@
 'use strict';
 
-// TODO: Test 'Approvers' list (approvalList.js)
-
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
 const AWS = require('aws-sdk');
@@ -312,7 +310,7 @@ module.exports = function ApprovalListPlugin(opts) {
 
         console.debug("Loading approvers from key: " + key);
 
-        redis.get(key, (err, result) => {
+        redis.hgetall(key, (err, result) => {
 
             if(err)
                 return done({
@@ -320,7 +318,13 @@ module.exports = function ApprovalListPlugin(opts) {
                     message: 'Failed to retrieve list of approvers.',
                     innerError: err });
 
-            state.set('approverList', result && JSON.parse(result) || []);
+            console.log(result);
+            var approvers = [];
+            for(var p in result)
+                if(result.hasOwnProperty(p))
+                    approvers.push(JSON.parse(result[p]));
+
+            state.set('approverList', approvers);
 
             done(null, state);
         });

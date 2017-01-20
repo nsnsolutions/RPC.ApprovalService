@@ -88,13 +88,7 @@ module.exports = function ApprovalCreatePlugin(opts) {
             price: state.get('price'),
             quantity: state.get('quantity', 0),
             disposition: lib.disposition.PENDING,
-            author: {
-                sponsorId: state.person.sponsorId,
-                clientId: state.person.clientId,
-                userId: state.person.userId,
-                email: state.person.email,
-                fullName: state.person.fullName
-            },
+            author: state.person,
             requestDate: rpcUtils.helpers.fmtDate(),
             updateDate: true /* cacheTable will set this value */
         };
