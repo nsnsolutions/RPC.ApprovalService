@@ -8,6 +8,7 @@ const AWS = require('aws-sdk');
 const lodash = require('lodash');
 
 module.exports = function ApprovalListPlugin(opts) {
+
     var seneca = this,
         env = opts.env,
         shared = lib.shared(seneca, opts),
@@ -29,7 +30,7 @@ module.exports = function ApprovalListPlugin(opts) {
     ];
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:listClientApprovalRecords.v1', listClientApprovalRecords_v1);
-    seneca.rpcAdd('role:approvalService.Pub,cmd:listSponsorpprovalRecords.v1', listSponsorApprovalRecords_v1);
+    seneca.rpcAdd('role:approvalService.Pub,cmd:listSponsorApprovalRecords.v1', listSponsorApprovalRecords_v1);
 
     return { name: "ApprovalListPlugin" };
 
@@ -82,16 +83,13 @@ module.exports = function ApprovalListPlugin(opts) {
     function validate(console, state, done) {
 
         /*
-         * REQUIRED
          * pageSize: Integer. Set the number of items in 1 page of data.
          * pageIndex: Integer. Select the page number to return. Zero based list. The first page is index zero.
          *
-         * OPTIONAL (All required if 1 is present.):
          * dateField: Select the date field (requestDate, completeDate, updateDate) used to apply range filters.
          * startDate: ISO8601 String. When provided, limits data to only requests created after this date.
          * endDate: ISO8601 String. When provided, limits data to only requests create before this date.
          *
-         * OPTIONAL:
          * sortBy: String. The name of a field defined in ApprovalEntity model used to sort the items array.
          * sortDir: String. A value indicating the sort direction. One of: "ascending", "descending"
          * filterBy: Filter String (see below). Defines additional limiting filters to apply to the query.
@@ -116,10 +114,19 @@ module.exports = function ApprovalListPlugin(opts) {
         var _filterBy = rpcUtils.FilterHelper.parseFilterString(state.get('filterBy', ""));
 
         /*
+         * Verify we know who is making this request.
+         */
+
+        if(!state.has('person', Object))
+            return done({
+                name: "internalError",
+                message: "Failed to load authority." });
+
+        /*
          * Pagination
          */
 
-        if(state.has('pageIndex') && !state.has('pageSize'))
+        else if(state.has('pageIndex') && !state.has('pageSize'))
             return done({
                 name: 'badRequest',
                 message: 'Missing required field: pageSize' });

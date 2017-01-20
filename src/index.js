@@ -56,6 +56,8 @@ module.exports = function RPC_ApprovalService(App) {
             bus.use(services.ApprovalCreatePlugin, params);
             bus.use(services.ApprovalMetricPlugin, params);
             bus.use(services.ApprovalListPlugin, params);
+            bus.use(services.ApprovalFetchPlugin, params);
+            bus.use(services.ApprovalCompletePlugin, params);
 
             bus.rpcClient({ pin: "role:*" });
             bus.rpcServer({ pin: [

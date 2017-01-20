@@ -23,15 +23,17 @@ module.exports = function incApprovedCount(seneca, opts) {
             sponsor: state.person.sponsorId,
             client: state.person.clientId });
 
+        var n = state.get('count', 1);
+
         redis.multi()
 
             // Move record from pending
-            .hincrby(keys.sponsor, dispositions.PENDING, -1)
-            .hincrby(keys.client, dispositions.PENDING, -1)
+            .hincrby(keys.sponsor, dispositions.PENDING, (n * -1))
+            .hincrby(keys.client, dispositions.PENDING, (n * -1))
 
             // Move count to approved
-            .hincrby(keys.sponsor, dispositions.APPROVED, 1)
-            .hincrby(keys.client, dispositions.APPROVED, 1)
+            .hincrby(keys.sponsor, dispositions.APPROVED, n)
+            .hincrby(keys.client, dispositions.APPROVED, n)
 
             .exec((err, replies) => {
                 if(err)

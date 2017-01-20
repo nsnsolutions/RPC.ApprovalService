@@ -22,7 +22,7 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         var params = {
             logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalStatusEntity_v1,
+            repr: lib.repr.ApprovalStatsEntity_v1,
             name: "Fetch Client Metrics (v1)",
             code: "FCM01",
             done: rpcDone
@@ -43,7 +43,7 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         var params = {
             logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalStatusEntity_v1,
+            repr: lib.repr.ApprovalStatsEntity_v1,
             name: "Fetch Sponsor Metrics (v1)",
             code: "FSM01",
             done: rpcDone

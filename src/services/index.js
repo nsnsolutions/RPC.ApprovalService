@@ -3,5 +3,7 @@
 module.exports = {
     ApprovalCreatePlugin: require('./approvalCreate'),
     ApprovalMetricPlugin: require('./approvalMetric'),
-    ApprovalListPlugin: require('./approvalList')
+    ApprovalListPlugin: require('./approvalList'),
+    ApprovalCompletePlugin: require('./approvalComplete'),
+    ApprovalFetchPlugin: require('./approvalFetch')
 };

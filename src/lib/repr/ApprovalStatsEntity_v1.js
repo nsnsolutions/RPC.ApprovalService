@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = function ApprovalStatusEntity_v1(o) {
+module.exports = function ApprovalStatsEntity_v1(o) {
     return {
         approvedCount: o.statusRecord.approved || 0,
         declinedCount: o.statusRecord.declined || 0,

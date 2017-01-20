@@ -23,9 +23,11 @@ module.exports = function incPendingCount(seneca, opts) {
             sponsor: state.person.sponsorId,
             client: state.person.clientId });
 
+        var n = state.get('count', 1);
+
         redis.multi()
-            .hincrby(keys.sponsor, dispositions.PENDING, 1)
-            .hincrby(keys.client, dispositions.PENDING, 1)
+            .hincrby(keys.sponsor, dispositions.PENDING, n)
+            .hincrby(keys.client, dispositions.PENDING, n)
             .exec((err, replies) => {
                 if(err)
                     return done({

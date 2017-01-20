@@ -87,7 +87,6 @@ module.exports = function ApprovalCreatePlugin(opts) {
             title: state.get('title'),
             price: state.get('price'),
             quantity: state.get('quantity', 0),
-            author: state.get('author'),
             disposition: lib.disposition.PENDING,
             author: {
                 sponsorId: state.person.sponsorId,

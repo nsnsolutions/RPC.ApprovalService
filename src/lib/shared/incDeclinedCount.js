@@ -23,15 +23,17 @@ module.exports = function incDeclinedCount(seneca, opts) {
             sponsor: state.person.sponsorId,
             client: state.person.clientId });
 
+        var n = state.get('count', 1);
+
         redis.multi()
 
             // Move record from pending
-            .hincrby(keys.sponsor, dispositions.PENDING, -1)
-            .hincrby(keys.client, dispositions.PENDING, -1)
+            .hincrby(keys.sponsor, dispositions.PENDING, (n * -1))
+            .hincrby(keys.client, dispositions.PENDING, (n * -1))
 
             // Move count to declined
-            .hincrby(keys.sponsor, dispositions.DECLINED, 1)
-            .hincrby(keys.client, dispositions.DECLINED, 1)
+            .hincrby(keys.sponsor, dispositions.DECLINED, n)
+            .hincrby(keys.client, dispositions.DECLINED, n)
 
             .exec((err, replies) => {
                 if(err)
