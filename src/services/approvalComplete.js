@@ -203,17 +203,27 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
         /* Do this async - It could take a waile. */
 
-        async.map(state.approvalRecords, 
+        async.map(state.approvalRecords,
 
             (record, next) => {
 
-                // TODO: Resubmit to job service
-                next();
+                var params = { 
+                    role: 'jobService.Pub',
+                    cmd: 'processJob.v1',
+                    jobId: record.jobId,
+                    token: state.token
+                };
+
+                seneca.act(params, (err, result) => {
+                    if(err)
+                        console.warn("Failed to finalize job.\n", err);
+
+                    next();
+                });
+
             },
 
-            (err, results) => {
-                console.log(err, results);
-            }
+            (err, results) => console.log("Completed finalizing jobs.")
         );
     }
 
