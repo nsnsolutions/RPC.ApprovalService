@@ -214,7 +214,7 @@ module.exports = function ApprovalListPlugin(opts) {
                 name: 'badRequest',
                 message: 'Wrong type for field: sortDir. Expected: String' });
 
-        else if(state.has('sortDir') && Objects.keys(sortDirs).indexOf(state.sortDir) < 0)
+        else if(state.has('sortDir') && Object.keys(sortDirs).indexOf(state.sortDir) < 0)
             return done({
                 name: 'badRequest',
                 message: 'Invalid value for field: sortDir. Expected: ascending or descending' });
