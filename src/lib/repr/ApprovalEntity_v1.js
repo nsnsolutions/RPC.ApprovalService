@@ -14,6 +14,7 @@ module.exports = function ApprovalEntity_v1(o) {
         author: Person_v1(o.approvalRecord.author),
         completedBy: o.approvalRecord.completedBy && Person_v1(o.approvalRecord.completedBy) || null,
         requestDate: o.approvalRecord.requestDate,
-        completeDate: o.approvalRecord.completeDate || null
+        completeDate: o.approvalRecord.completeDate || null,
+        comments: o.approvalRecord.comments || null
     }
 }
