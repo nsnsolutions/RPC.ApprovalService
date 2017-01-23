@@ -34,8 +34,6 @@ module.exports = function ApprovalMetricPlugin(opts) {
             getClientMetrics
         ];
 
-        args.set('context', 'client');
-
         rpcUtils.Executor(params).run(args);
     }
 
@@ -54,8 +52,6 @@ module.exports = function ApprovalMetricPlugin(opts) {
             validate,
             getSponsorMetrics
         ];
-
-        args.set('context', 'sponsor');
 
         rpcUtils.Executor(params).run(args);
     }
@@ -81,8 +77,8 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
         console.info("Get Client Metrics");
 
-        var keys = lib.helpers.makeMetricKeys({
-            client: state.person.clientId 
+        var keys = lib.helpers.makeMetricKeys(env, {
+            client: state.person.clientId
         });
 
         console.debug("Retrieving metrics with key: " + keys.client);
