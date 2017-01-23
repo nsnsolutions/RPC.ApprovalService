@@ -27,6 +27,13 @@ module.exports = function ApprovalListPlugin(opts) {
         'completeDate',
     ];
 
+    const sortDirs = {
+        'asc': 'ascending',
+        'desc': 'descending',
+        'ascending': 'ascending',
+        'descending': 'descending'
+    };
+
     seneca.rpcAdd('role:approvalService.Pub,cmd:listClientApprovalRecords.v1', listClientApprovalRecords_v1);
     seneca.rpcAdd('role:approvalService.Pub,cmd:listSponsorApprovalRecords.v1', listSponsorApprovalRecords_v1);
 
@@ -137,17 +144,17 @@ module.exports = function ApprovalListPlugin(opts) {
         else if(state.has('pageSize') && state.pageSize <= 0)
             return done({
                 name: 'badRequest',
-                message: 'Invalid value for field: pageSize. Expected: Positive, None-Zero' });
+                message: 'Invalid value for field: pageSize. Expected: Positive, Non-Zero' });
 
         else if(state.has('pageIndex') && !state.has('pageIndex', Number))
             return done({
                 name: 'badRequest',
                 message: 'Wrong type for field: pageIndex. Expected: Number' });
 
-        else if(state.has('pageIndex') && state.pageIndex < 0)
+        else if(state.has('pageIndex') && state.pageIndex < 1)
             return done({
                 name: 'badRequest',
-                message: 'Invalid value for field: pageIndex. Expected: Positive or Zero' });
+                message: 'Invalid value for field: pageIndex. Expected: Positive, Non-Zero' });
 
         /*
          * Date Filtering
@@ -207,7 +214,7 @@ module.exports = function ApprovalListPlugin(opts) {
                 name: 'badRequest',
                 message: 'Wrong type for field: sortDir. Expected: String' });
 
-        else if(state.has('sortDir') && ['ascending', 'descending'].indexOf(state.sortDir) < 0)
+        else if(state.has('sortDir') && Objects.keys(sortDirs).indexOf(state.sortDir) < 0)
             return done({
                 name: 'badRequest',
                 message: 'Invalid value for field: sortDir. Expected: ascending or descending' });
@@ -230,11 +237,14 @@ module.exports = function ApprovalListPlugin(opts) {
          * Set Defaults
          */
 
-        state.ensureExists('pageIndex', 0);
+        state.ensureExists('pageIndex', 1);
         state.ensureExists('sortBy', state.get('dateField', 'requestDate'));
 
         if(_filterBy) 
             state.set('filterBy', _filterBy);
+
+        if(state.has('sortDir'))
+            state.set('sortDir', sortDirs[state.sortDir]);
 
         done(null, state);
     }
@@ -384,7 +394,7 @@ module.exports = function ApprovalListPlugin(opts) {
         state.set('totalCount', state.approvalRecords.length);
         state.ensureExists('pageSize', state.totalCount);
 
-        var offset = (state.pageIndex) * state.pageSize;
+        var offset = (state.pageIndex - 1) * state.pageSize;
 
         var result = state.approvalRecords
             .slice(offset, offset + state.pageSize);
