@@ -11,13 +11,13 @@ module.exports = function RPC_ApprovalService(App) {
     var conf = App.configurations;
 
     // Validate Shared Configs
-    conf.service.assertMember("approvalTableName");
-
-    // Validate Service Configs.
     conf.shared.assertMember("region");
     conf.shared.assertMember("cacheEndpoint");
     conf.shared.assertMember("logLevel");
     conf.shared.assertMember("clusterName");
+
+    // Validate Service Configs.
+    conf.service.assertMember("approvalTableName");
 
     var app = App({
         onConfigUpdate: () => app.restart(),
@@ -44,6 +44,11 @@ module.exports = function RPC_ApprovalService(App) {
         };
 
         rpcUtils.CachedTable.create(tableCacheParams, (err, tables) => {
+
+            if(err) {
+                console.error("FATAL: Failed to initialize dynamo cache.", err);
+                return process.exit(1);
+            }
 
             var params = {
                 env: conf.shared.clusterName,
