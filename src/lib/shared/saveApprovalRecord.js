@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = function saveApprovalRecord(seneca, opts) {
 
     var shared = this,

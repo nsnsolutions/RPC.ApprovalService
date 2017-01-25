@@ -6,7 +6,6 @@ const rpcUtils = require('rpc-utils');
 module.exports = function getAuthorityFromToken(seneca, opts) {
 
     var shared = this,
-        approvalTable = opts.tables.approval,
         logLevel = opts.logLevel
 
     return handler;
@@ -17,7 +16,7 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
 
         console.info("Get Authority From Token");
 
-        if(!state.has('token'))
+        if(!state.has('token', String))
             return done({
                 name: "badRequest",
                 message: "Missing authority." });
@@ -39,12 +38,12 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
                     innerError: err });
 
             else if(result.hasError)
-                return done({
-                    name: "notAuthorized",
-                    message: "Authorization failed: " + result.message });
+                return done(result);
 
             var person = new rpcUtils.Person(result.result);
+
             console.debug("Authority: " + person.toString());
+
             state.set("person", person);
             return done(null, state);
         });

@@ -2,8 +2,6 @@
 
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
-const AWS = require('aws-sdk');
-const lodash = require('lodash');
 
 module.exports = function ApprovalFetchPlugin(opts) {
 
