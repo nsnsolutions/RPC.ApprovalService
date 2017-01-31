@@ -4,5 +4,6 @@ module.exports = {
     repr: require('./repr'),
     shared: require('./shared'),
     disposition: require('./disposition'),
-    helpers: require('./helpers')
+    helpers: require('./helpers'),
+    Proxy: require('./Proxy')
 };

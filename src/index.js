@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const redis = require('redis');
 const rpcUtils = require('rpc-utils');
 const services = require('./services');
+const lib = require('./lib');
 
 module.exports = function RPC_ApprovalService(App) {
 
@@ -34,6 +35,7 @@ module.exports = function RPC_ApprovalService(App) {
 
         var redisClient = redis.createClient({ url: conf.shared.cacheEndpoint });
         var dynamoClient = new AWS.DynamoDB({ region: conf.shared.region });
+        var proxy = new lib.Proxy({ seneca: bus });
 
         var tableCacheParams = {
             dynamoClient: dynamoClient,
@@ -55,7 +57,8 @@ module.exports = function RPC_ApprovalService(App) {
                 logLevel: conf.shared.logLevel,
                 tables: tables,
                 redisClient: redisClient,
-                dynamoClient: dynamoClient
+                dynamoClient: dynamoClient,
+                proxy: proxy
             };
 
             bus.use(services.ApprovalCreatePlugin, params);

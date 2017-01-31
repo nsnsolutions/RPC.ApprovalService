@@ -7,6 +7,7 @@ module.exports = function ApprovalCreatePlugin(opts) {
 
     var seneca = this,
         shared = lib.shared(seneca, opts),
+        proxy = opts.proxy,
         logLevel = opts.logLevel;
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:createApprovalRecord.v1', createApprovalRecord_v1);
@@ -30,7 +31,8 @@ module.exports = function ApprovalCreatePlugin(opts) {
             validate,
             createRecord,
             shared.saveApprovalRecord,
-            shared.incPendingCount
+            shared.incPendingCount,
+            raiseEvent
         ];
 
         rpcUtils.Executor(params).run(args);
@@ -77,7 +79,7 @@ module.exports = function ApprovalCreatePlugin(opts) {
 
         console.log("Creating new approval record.");
 
-        state.raw.approvalRecord = {
+        var record = {
             approvalId: rpcUtils.helpers.fmtUuid(),
             sponsorId: state.person.sponsorId,
             clientId: state.person.clientId,
@@ -93,6 +95,29 @@ module.exports = function ApprovalCreatePlugin(opts) {
             updateDate: true /* cacheTable will set this value */
         };
 
+        state.set('approvalRecord', record);
         done(null, state);
+    }
+
+    function raiseEvent(console, state, done) {
+
+        done(null, state);
+
+        console.log("Raising 'PrintJobApprovalRequested' Event (Background Task)");
+
+        var params = {
+            token: state.token,
+            logLevel: console.level,
+            type: 'PrintJobApprovalRequested',
+            jobId: state.approvalRecord.jobId,
+            eventDate: rpcUtils.helpers.fmtDate()
+        };
+
+        proxy.eventService.raiseEvent(params, (err, data) => {
+            if(err)
+                console.error("Failed to raise event.\n", err);
+            else
+                console.debug("Event raised successfully.");
+        });
     }
 };
