@@ -34,7 +34,8 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
             if(err)
                 return done(result);
 
-            var person = new rpcUtils.Person(result.result);
+            console.log(err, result);
+            var person = new rpcUtils.Person(result);
 
             console.debug("Authority: " + person.toString());
 
