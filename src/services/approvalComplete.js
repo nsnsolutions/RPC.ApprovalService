@@ -8,6 +8,7 @@ const rpcfw = require('rpcfw');
 module.exports = function ApprovalCompletePlugin(opts) {
 
     var seneca = this,
+        proxy = opts.proxy,
         env = opts.env,
         shared = lib.shared(seneca, opts),
         redis = opts.redisClient,
@@ -206,15 +207,34 @@ module.exports = function ApprovalCompletePlugin(opts) {
             (record, next) => {
 
                 var params = { 
-                    role: 'jobService.Pub',
-                    cmd: 'processJob.v1',
+                    logLevel: console.level,
                     jobId: record.jobId,
                     token: state.token
                 };
 
-                seneca.act(params, (err, result) => {
+                proxy.jobService.processJob(params, (err, result) => {
                     if(err)
                         console.warn("Failed to finalize job.\n", err);
+
+                    else if(record.disposition === lib.disposition.APPROVED)
+                        _raiseEvent(console, {
+                            token: params.token,
+                            logLevel: params.logLevel,
+                            type: 'PrintJobApproved',
+                            jobId: params.jobId,
+                            comments: record.comments,
+                            eventDate: rpcUtils.helpers.fmtDate()
+                        });
+
+                    else if(record.disposition === lib.disposition.DECLINED)
+                        _raiseEvent(console, {
+                            token: params.token,
+                            logLevel: params.logLevel,
+                            type: 'PrintJobDeclined',
+                            jobId: params.jobId,
+                            comments: record.comments,
+                            eventDate: rpcUtils.helpers.fmtDate()
+                        });
 
                     next();
                 });
@@ -223,6 +243,18 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
             (err, results) => console.log("Completed finalizing jobs.")
         );
+    }
+
+    function _raiseEvent(console, eventParams) {
+
+        console.log(`Raising '${eventParams.type}' Event (Background Task)`);
+
+        proxy.eventService.raiseEvent(eventParams, (err, data) => {
+            if(err)
+                console.error("Failed to raise event.\n", err);
+            else
+                console.debug("Event raised successfully.");
+        });
     }
 
 };

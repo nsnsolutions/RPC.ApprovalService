@@ -1,12 +1,12 @@
 'use strict';
 
-const AUTHORITY_SERVICE = "role:accountService.Pub,cmd:getAuthorityFromToken.v1";
 const rpcUtils = require('rpc-utils');
 
 module.exports = function getAuthorityFromToken(seneca, opts) {
 
     var shared = this,
-        logLevel = opts.logLevel
+        proxy = opts.proxy,
+        logLevel = opts.logLevel;
 
     return handler;
 
@@ -29,15 +29,9 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
             token: _header[1]
         };
 
-        seneca.act(AUTHORITY_SERVICE, params, (err, result) => {
+        proxy.accountService.getAuthorityFromToken(params, (err, result) => {
 
             if(err)
-                return done({
-                    name: "notAuthorized",
-                    message: "Unable to obtain authority.",
-                    innerError: err });
-
-            else if(result.hasError)
                 return done(result);
 
             var person = new rpcUtils.Person(result.result);
