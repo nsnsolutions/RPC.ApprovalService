@@ -32,9 +32,8 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
         proxy.accountService.getAuthorityFromToken(params, (err, result) => {
 
             if(err)
-                return done(result);
+                return done(err);
 
-            console.log(err, result);
             var person = new rpcUtils.Person(result);
 
             console.debug("Authority: " + person.toString());
