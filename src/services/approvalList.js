@@ -280,6 +280,14 @@ module.exports = function ApprovalListPlugin(opts) {
         console.debug("Running with query: ", query);
 
         ddb.query(query, (err, data) => {
+
+            if(err) 
+                return done({
+                    name: "internalError",
+                    message: "Unable to retrieve records.",
+                    innerError: err
+                });
+
             state.set('approvalRecords', data.Items);
             done(null, state);
         });
