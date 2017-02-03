@@ -15,6 +15,7 @@ module.exports = function ApprovalListPlugin(opts) {
         approvalTableName = opts.tables.approval.tableName,
         logLevel = opts.logLevel;
 
+    // author, approver
     const sortFields = [
         'jobId',
         'price',
@@ -25,6 +26,8 @@ module.exports = function ApprovalListPlugin(opts) {
         'updateDate',
         'requestDate',
         'completeDate',
+        'author.fullName',
+        'completedBy.fullName'
     ];
 
     const sortDirs = {
