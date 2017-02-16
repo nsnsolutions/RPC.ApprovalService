@@ -1,0 +1,393 @@
+name: RPC.ApprovalService
+service: approvalService
+description: Raise events on SNS Bus.
+
+methods:
+
+  - name: finalizeApprovalRequest
+    title: Finalize Approval Request
+    version: v1
+    desc: Approve or decline an approval request and begin processing job.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:30 access.
+
+      - name: jobIds
+        type: Array
+        default: N/A
+        desc: A list of jobIds to finalize.
+
+      - name: disposition
+        type: String
+        default: N/A
+        desc: "The disposition to set on the finalized jobs. One of: _approved_, _declined_"
+
+      - name: comments
+        type: String
+        default: null
+        desc: "Optional: Custom comments from the person that finalized the request(s)."
+
+    returns:
+      - 4
+
+  - name: createApprovalRecord
+    title: Create Approval Record
+    version: v1
+    desc: Create a new approval record for an existing job.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+      - name: type
+        type: String
+        default: N/A
+        desc: "The type of job. eg: _print_, _email_"
+
+      - name: jobId
+        type: String
+        default: N/A
+        desc: The jobId that needs approval.
+
+      - name: jobUniqueId
+        type: String
+        default: null
+        desc: The client job unique identifier associated with the job that needs approval.
+
+      - name: title
+        type: String
+        default: null
+        desc: The product title used by the job that needs approval.
+
+      - name: price
+        type: Number
+        default: N/A
+        desc: The unit cost associated with this job, if approved.
+
+      - name: quantity
+        type: Number
+        default: 0
+        desc: The number of units that will be sent if approved.
+
+    returns:
+      - 1
+
+  - name: fetchApprovalRecord
+    title: Fetch Approval Record
+    version: v1
+    desc: Retrieve the details about a specific approval request.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+      - name: jobId
+        type: String
+        default: N/A
+        desc: The jobId associated with the desired approval request.
+
+    returns:
+      - 1
+
+  - name: listClientApprovalRecords
+    title: List Client Approval Records
+    version: v1
+    desc: Search for a list of approval records filtered by the current client.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+      - name: pageSize
+        type: Number
+        default: _Total_
+        desc: "Optional: Set the number of items in 1 page of data."
+
+      - name: pageIndex
+        type: Number
+        default: 1
+        desc: "Optional: The page of data to return."
+
+      - name: dateField
+        type: String
+        default: null
+        desc: "Optional: Select the date field (requestDate, completeDate, updateDate) used to apply range filters."
+
+      - name: startDate
+        type: ISO8601 String. 
+        default: null
+        desc: "Optional: When provided, limits data to only requests created after this date."
+
+      - name: endDate
+        type: ISO8601 String.
+        default: null
+        desc: "Optional: When provided, limits data to only requests create before this date."
+      
+      - name: sortBy
+        type: String.
+        default: _dateField_ or _createDate_
+        desc: "Optional: The name of a field defined in ApprovalEntity model used to sort the items array."
+
+      - name: sortDir
+        type: String.
+        default: ascending
+        desc: "Optional: A value indicating the sort direction. One of: _ascending_, _descending_"
+
+      - name: filterBy
+        type: String
+        default: "\"\""
+        desc: "Optional: Defines additional limiting filters to apply to the query.  See [Static Parse Filter](https://github.com/nsnsolutions/RPC.Utils/blob/devel/README.md#staticmethod-parsefilterstring) for more information."
+
+    returns:
+      - 2
+
+  - name: listSponsorApprovalRecords
+    title: List Sponsor Approval Records
+    version: v1
+    desc: Search for a list of approval records filtered by the current sponsor.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+      - name: pageSize
+        type: Number
+        default: _Total_
+        desc: "Optional: Set the number of items in 1 page of data."
+
+      - name: pageIndex
+        type: Number
+        default: 1
+        desc: "Optional: The page of data to return."
+
+      - name: dateField
+        type: String
+        default: null
+        desc: "Optional: Select the date field (requestDate, completeDate, updateDate) used to apply range filters."
+
+      - name: startDate
+        type: ISO8601 String. 
+        default: null
+        desc: "Optional: When provided, limits data to only requests created after this date."
+
+      - name: endDate
+        type: ISO8601 String.
+        default: null
+        desc: "Optional: When provided, limits data to only requests create before this date."
+      
+      - name: sortBy
+        type: String.
+        default: _dateField_ or _createDate_
+        desc: "Optional: The name of a field defined in ApprovalEntity model used to sort the items array."
+
+      - name: sortDir
+        type: String.
+        default: ascending
+        desc: "Optional: A value indicating the sort direction. One of: _ascending_, _descending_"
+
+      - name: filterBy
+        type: String
+        default: "\"\""
+        desc: "Optional: Defines additional limiting filters to apply to the query.  See [Static Parse Filter](https://github.com/nsnsolutions/RPC.Utils/blob/devel/README.md#staticmethod-parsefilterstring) for more information."
+
+    returns:
+      - 2
+
+  - name: fetchClientMetrics
+    title: Fetch Client Metrics
+    version: v1
+    desc: Retrieve the count of approved, declined, and pending requests for the current client.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+    returns:
+      - 3
+
+  - name: fetchSponsorMetrics
+    title: Fetch Sponsor Metrics
+    version: v1
+    desc: Retrieve the count of approved, declined, and pending requests for the current sponsor.
+    args:
+
+      - name: token
+        type: String
+        default: N/A
+        desc: An authority token providing at least JOB:10 access.
+
+    returns:
+      - 3
+
+representation:
+
+  - name: Empty
+    version: all
+    desc: Represents a empty data return.
+    fields: false
+
+  - name: Approval Entity
+    version: v1
+    desc: A complete approval request record containg all information currently known about an approval request.
+    fields: 
+
+      - name: disposition
+        type: String
+        desc: If set, the finalized disposition (_approved_, _declined_) of this approval request.
+
+      - name: type
+        type: String
+        desc: The type of job (_print_, _email_, _pdf_) set on the origination job of this approval request.
+
+      - name: jobId
+        type: String
+        desc: The VFS jobId associated with the origination job of this approval request.
+
+      - name: jobUniqueId
+        type: String
+        desc: The client job unique identifier associated with the origination job of this approval request.
+
+      - name: title
+        type: String
+        desc: The product title used by the associated origination job of this approval request.
+
+      - name: price
+        type: Number
+        desc: The unit cost associated with the origination job of this approval request.
+
+      - name: quantity
+        type: Number
+        desc: The number of units associated with the origination job of this approval request.
+
+      - name: author
+        type: "[Person (v1)](#person-v1)"
+        desc: The person that created the approval request.
+
+      - name: completedBy
+        type: "[Person (v1)](#person-v1)"
+        desc: The person that finalized the approval request.
+
+      - name: requestDate
+        type: ISO8601 String
+        desc: The date and time at which the request was requested.
+
+      - name: completeDate
+        type: ISO8601 String
+        desc: The date and time at which the request was completed.
+
+      - name: comments
+        type: String
+        desc: If set, The comments added by the approver/decliner when the request was finalized.
+
+  - name: Approval List Entity
+    version: v1
+    desc: The search results of an approval list query operation. This entity contains details about page information, currently known approvers (for filtering) and the current page's result set.
+    fields:
+
+      - name: jobIds
+        type: String Array
+        desc: A list of all the jobIds found under the current filters accross all pages.
+
+      - name: items
+        type: "[Approval Entity (v1)](#approval--entity-v1) Array"
+        desc: The current page of appoval records that match the provided search criteria.
+
+      - name: approvers
+        type: "[Person (v1)](#person-v1) Array."
+        desc: A list of all approvers known to the system under the current context.
+
+      - name: totalCount
+        type: Number
+        desc: The total number of items identify in the search accross all pages.
+
+      - name: pageIndex
+        type: Number
+        desc: The current page number.
+
+      - name: itemPerPage
+        type: Number
+        desc: The maximum number of items on each page.
+
+  - name: Approval Stats Entity
+    version: v1
+    desc: Status counts (_pending_, _approved_, _declined_) for the current context (sponsor, client).
+    fields:
+      - name: approvedCount
+        type: Number
+        desc: The number of items that have been approved, in context.
+
+      - name: declinedCount
+        type: Number
+        desc: The number of items that have been declined, in context.
+
+      - name: pendingCount
+        type: Number
+        desc: The number of items waiting for finalization, in context.
+
+  - name: Finalize Response Entity
+    version: v1
+    desc: The results of a Finalize Approval Request operation. This response will contain a status for each job in the finalize request.
+    fields:
+
+      - name: hasError
+        type: Boolean
+        desc: A boolean value indicating if any of the items failed to process.
+
+      - name: items
+        type: "[Finalize Response Item (v1)](#finalize-response-item-v1) Array"
+        desc: An array of items that indicate the success state of each job in the finalize request.
+
+  - name: Finalize Response Item
+    version: v1
+    desc: A entity indicating the success of a single item in a [Finalize Response Entity (v1)](#finalize-response-entity-v1).
+    fields:
+
+      - name: jobId
+        type: String
+        desc: The jobId associated with the approval request that was finalized.
+
+      - name: success
+        type: Boolean
+        desc: A boolean value indicating the success state of this item.
+
+      - name: message
+        type: String
+        desc: A success message or explination of a processing failure.
+
+  - name: Person
+    version: v1
+    desc: A person, author or approver, refrenced by another model.
+    fields:
+
+      - name: sponsorId
+        type: String
+        desc: The unique identifier of the sponsor record to which this person belongs.
+
+      - name: clientId
+        type: String
+        desc: The unique identifier of the client record to which this person belongs.
+
+      - name: userId
+        type: String
+        desc: The unique identifier of the user as defined by the sponser.
+
+      - name: email
+        type: String
+        desc: The users email address.
+
+      - name: fullName
+        type: String
+        desc: The users full name.
