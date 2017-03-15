@@ -26,6 +26,7 @@ module.exports = function ApprovalListPlugin(opts) {
         'updateDate',
         'requestDate',
         'completeDate',
+        'jobUniqueId',
         'author.fullName',
         'completedBy.fullName'
     ];
