@@ -3,16 +3,14 @@
     "start": "node_modules/.bin/rpcfw run Service.yml"
   },
   "dependencies": {
-    "aws-sdk": "^2.6.4",
-    "async": "^2.1.2",
-    "lodash": "^4.17.4",
-    "redis": "^2.6.5",
-    "require-dir": "^0.3.1",
-    "rpc-utils": "git://github.com/nsnsolutions/RPC.Utils.git#v1.0.0",
-    "rpcfw": "git://github.com/nsnsolutions/rpcfw.git#v1.2"
+    "aws-sdk": "2.46.0",
+    "async": "2.3.0",
+    "lodash": "4.17.4",
+    "redis": "2.7.1",
+    "require-dir": "0.3.1",
+    "rpc-utils": "git://github.com/nsnsolutions/RPC.Utils.git#v1.0.1",
+    "rpcfw": "git://github.com/nsnsolutions/rpcfw.git#v1.2.1"
   },
   "devDependencies": {
-    "nunjucks": "^2.5.2",
-    "prompt": "^1.0.0"
   }
 }
