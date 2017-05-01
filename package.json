@@ -9,7 +9,7 @@
     "redis": "2.7.1",
     "require-dir": "0.3.1",
     "rpc-utils": "git://github.com/nsnsolutions/RPC.Utils.git#v1.0.1",
-    "rpcfw": "git://github.com/nsnsolutions/rpcfw.git#v1.2.1"
+    "rpcfw": "git://github.com/nsnsolutions/rpcfw.git#v1.2.2"
   },
   "devDependencies": {
   }
