@@ -17,7 +17,7 @@ module.exports = function ApprovalCreatePlugin(opts) {
     // ------------------------------------------------------------------------
 
     function createApprovalRecord_v1(args, rpcDone) {
-        
+
         var params = {
             logLevel: args.get("logLevel", logLevel),
             repr: lib.repr.ApprovalEntity_v1,
@@ -53,22 +53,22 @@ module.exports = function ApprovalCreatePlugin(opts) {
                 message: "Unable to complete request: Insufficient privileges" });
 
         else if(!state.has('type', String))
-            return done({ 
+            return done({
                 name: "badRequest",
                 message: "Missing required field: type" });
 
         else if(!state.has('jobId', String))
-            return done({ 
+            return done({
                 name: "badRequest",
                 message: "Missing required field: jobId" });
 
         else if(!state.has('title', String))
-            return done({ 
+            return done({
                 name: "badRequest",
                 message: "Missing required field: title" });
 
         else if(!state.has('price', Number))
-            return done({ 
+            return done({
                 name: "badRequest",
                 message: "Missing required field: price" });
 
@@ -103,12 +103,18 @@ module.exports = function ApprovalCreatePlugin(opts) {
 
         done(null, state);
 
-        console.log("Raising 'PrintJobApprovalRequested' Event (Background Task)");
+        var eventType = (state.type == 'email')
+          ? 'EmailJobApprovalRequested'
+          : 'PrintJobApprovalRequested';
+
+        console.log("Job Type = " + state.type);
+        console.log("Event Type = " + eventType);
+        console.log("Raising '" + eventType + "' Event (Background Task)");
 
         var params = {
             token: state.token,
             logLevel: console.level,
-            type: 'PrintJobApprovalRequested',
+            type: eventType,
             jobId: state.approvalRecord.jobId,
             eventDate: rpcUtils.helpers.fmtDate()
         };

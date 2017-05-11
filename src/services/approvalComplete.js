@@ -46,7 +46,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
     function validate(console, state, done) {
 
-        console.info("Validating client  request.");
+        console.info("Validating client request.");
 
         if(!state.has('person', Object))
             return done({
@@ -95,7 +95,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
         console.info("Fetching approval records.");
 
-        async.map(state.jobIds, 
+        async.map(state.jobIds,
 
             (jobId, next) => {
 
@@ -109,7 +109,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
                         return next(err);
                     next(null, result.approvalRecord);
                 });
-            }, 
+            },
 
             (err, results) => {
                 if(err)
@@ -206,35 +206,50 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
             (record, next) => {
 
-                var params = { 
+                var params = {
                     logLevel: console.level,
                     jobId: record.jobId,
                     token: state.token
                 };
 
+                console.log('Job Type = ' + record.type);
+
                 proxy.jobService.processJob(params, (err, result) => {
                     if(err)
                         console.warn("Failed to finalize job.\n", err);
 
-                    else if(record.disposition === lib.disposition.APPROVED)
-                        _raiseEvent(console, {
-                            token: params.token,
-                            logLevel: params.logLevel,
-                            type: 'PrintJobApproved',
-                            jobId: params.jobId,
-                            comments: record.comments,
-                            eventDate: rpcUtils.helpers.fmtDate()
-                        });
+                    else if(record.disposition === lib.disposition.APPROVED) {
 
-                    else if(record.disposition === lib.disposition.DECLINED)
+                        var eventType = (record.type == 'email')
+                            ? 'EmailJobApproved'
+                            : 'PrintJobApproved';
+                        console.log("Raising '" + eventType + "' Event (Background Task)");
+
                         _raiseEvent(console, {
                             token: params.token,
                             logLevel: params.logLevel,
-                            type: 'PrintJobDeclined',
+                            type: eventType,
                             jobId: params.jobId,
                             comments: record.comments,
                             eventDate: rpcUtils.helpers.fmtDate()
                         });
+                    }
+                    else if(record.disposition === lib.disposition.DECLINED) {
+
+                        var eventType = (record.type == 'email')
+                            ? 'EmailJobDeclined'
+                            : 'PrintJobDeclined';
+                        console.log("Raising '" + eventType + "' Event (Background Task)");
+
+                        _raiseEvent(console, {
+                            token: params.token,
+                            logLevel: params.logLevel,
+                            type: eventType,
+                            jobId: params.jobId,
+                            comments: record.comments,
+                            eventDate: rpcUtils.helpers.fmtDate()
+                        });
+                    }
 
                     next();
                 });
