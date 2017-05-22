@@ -1,7 +1,7 @@
 # Here be a service
 ---
 name: RPC.ApprovalService
-version: 1.0.1
+version: 1.1.0
 description: Manage the approval process for jobs.
 
 main: src/index.js
