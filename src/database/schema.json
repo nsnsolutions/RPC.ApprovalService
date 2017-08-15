@@ -1,0 +1,180 @@
+{
+    "schema": {
+
+        "Disposition": {
+
+            "columns": [
+                { 
+                    "name": "id",
+                    "type": "varchar",
+                    "length": 128,
+                    "primary_key": true,
+                    "nullable": false,
+                    "unique": true 
+                }, { 
+                    "name": "name",
+                    "type": "varchar",
+                    "length": 32,
+                    "unique": true,
+                    "nullable": false 
+                }
+            ],
+
+            "indexes": [ 
+                { 
+                    "name": "idx_disposition_name",
+                    "columns": "name"
+                }
+            ]
+        },
+
+        "Person": {
+
+            "columns": [
+                { 
+                    "name": "id",
+                    "type": "varchar",
+                    "length": 128,
+                    "primary_key": true,
+                    "nullable": false,
+                    "unique": true
+                }, {
+                    "name": "sponsorId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "clientId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "fullName",
+                    "type": "varchar",
+                    "length": 256,
+                    "nullable": false
+                }, {
+                    "name": "email",
+                    "type": "varchar",
+                    "length": 256,
+                    "nullable": false
+                }
+            ],
+
+            "indexes": [
+                {
+                    "name": "idx_person_sponsorId" ,
+                    "columns": "sponsorId"
+                },{
+                    "name": "idx_person_clientId" ,
+                    "columns": [ "sponsorId", "clientId" ]
+                }
+            ]
+        },
+
+        "Approvals": {
+            "columns": [
+                { 
+                    "name": "id",
+                    "type": "varchar",
+                    "length": 128,
+                    "primary_key": true,
+                    "unique": true,
+                    "nullable": false
+                }, { 
+                    "name": "sponsorId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, { 
+                    "name": "clientId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, { 
+                    "name": "jobId",
+                    "type": "varchar",
+                    "length": 128,
+                    "unique": true,
+                    "nullable": false
+                }, { 
+                    "name": "type",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, { 
+                    "name": "jobUniqueId",
+                    "type": "varchar",
+                    "length": 128
+                }, { 
+                    "name": "title",
+                    "type": "varchar",
+                    "length": 512
+                }, { 
+                    "name": "price",
+                    "type": "varchar",
+                    "length": 16
+                }, { 
+                    "name": "quantity",
+                    "type": "integer",
+                    "nullable": false,
+                    "default": 0
+                }, { 
+                    "name": "comments",
+                    "type": "varchar",
+                    "length": 1024
+                }, {
+                    "name": "authorId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "approverId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "dispositionId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }
+
+            ],
+
+            "indexes": [ 
+                { 
+                    "name": "idx_approval_jobId" ,
+                    "columns": "jobId"
+                },{ 
+                    "name": "idx_approval_createDate",
+                    "columns": "createDate"
+                },{
+                    "name": "idx_approval_sponsorId",
+                    "columns": "sponsorId"
+                },{
+                    "name": "idx_approval_clientId",
+                    "columns": [ "sponsorId", "clientId" ]
+                }
+            ],
+
+            "foreign_keys": [
+                {
+                    "columns": "authorId",
+                    "foreign_table": "Person",
+                    "foreign_columns": "id"
+                }, {
+                    "columns": "approverId",
+                    "foreign_table": "Person",
+                    "foreign_columns": "id"
+                }, {
+                    "columns": "dispositionId",
+                    "foreign_table": "Disposition",
+                    "foreign_columns": "id"
+                }
+            ],
+
+            "timestamps": true
+        }
+    }
+}
