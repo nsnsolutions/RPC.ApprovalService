@@ -1,7 +1,7 @@
 {
     "schema": {
 
-        "Disposition": {
+        "disposition": {
 
             "columns": [
                 { 
@@ -28,7 +28,7 @@
             ]
         },
 
-        "Person": {
+        "person": {
 
             "columns": [
                 { 
@@ -72,7 +72,7 @@
             ]
         },
 
-        "Approvals": {
+        "approval": {
             "columns": [
                 { 
                     "name": "id",
@@ -147,9 +147,6 @@
                     "name": "idx_approval_jobId" ,
                     "columns": "jobId"
                 },{ 
-                    "name": "idx_approval_createDate",
-                    "columns": "createDate"
-                },{
                     "name": "idx_approval_sponsorId",
                     "columns": "sponsorId"
                 },{
@@ -161,15 +158,15 @@
             "foreign_keys": [
                 {
                     "columns": "authorId",
-                    "foreign_table": "Person",
+                    "foreign_table": "person",
                     "foreign_columns": "id"
                 }, {
                     "columns": "approverId",
-                    "foreign_table": "Person",
+                    "foreign_table": "person",
                     "foreign_columns": "id"
                 }, {
                     "columns": "dispositionId",
-                    "foreign_table": "Disposition",
+                    "foreign_table": "disposition",
                     "foreign_columns": "id"
                 }
             ],
