@@ -1,8 +1,6 @@
 'use strict';
 
-const helpers = require('../helpers');
-
-module.exports = function addPersonAsApprover(opts) {
+module.exports = function addPersonAsAuthor(opts) {
 
     var seneca = this,
         redis = opts.redisClient,
@@ -15,28 +13,25 @@ module.exports = function addPersonAsApprover(opts) {
 
     function handler(console, state, done) {
 
-        console.info("Adding user to list of approvers.");
-
         models.Person.forge({
             id: state.$principal.userId,
             sponsorId: state.$principal.sponsorId,
             clientId: state.$principal.clientId,
             fullName: state.$principal.fullName,
             email: state.$principal.email,
-            isApprover: true
-        }).upsert().then(dbSuccess, error);
+        }).upsert().then(success, error);
 
-        function dbSuccess(model) {
-            state.set('approverRecord', model);
+        function success(model) {
+            state.set('authorRecord', model);
             done(null, state);
         }
 
         function error(err) {
             done({
                 name: 'internalError',
-                message: "Failed to create approver record.",
+                message: "Failed to create author record.",
                 innerError: err.message 
             });
         }
     }
-};
+}

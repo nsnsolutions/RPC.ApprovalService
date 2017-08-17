@@ -2,13 +2,13 @@
 
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
+const Authorizers = rpcUtils.Principal.Authorizers;
 
 module.exports = function ApprovalMetricPlugin(opts) {
 
     var seneca = this,
-        env = opts.env,
-        shared = lib.shared(seneca, opts),
         redis = opts.redisClient,
+        models = opts.models,
         logLevel = opts.logLevel;
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:fetchClientMetrics.v1', fetchClientMetrics_v1);
@@ -21,78 +21,85 @@ module.exports = function ApprovalMetricPlugin(opts) {
     function fetchClientMetrics_v1(args, rpcDone) {
 
         var params = {
-            logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalStatsEntity_v1,
             name: "Fetch Client Metrics (v1)",
             code: "FCM01",
-            done: rpcDone
+            repr: lib.repr.ApprovalStatsEntity_v1,
+
+            authorizer: Authorizers.with('JOB:10'),
+
+            transport: seneca,
+            logLevel: args.get("logLevel", logLevel),
+            done: rpcDone,
+
+            required: [ /* No Args */ ],
+            optional: [ { field: "sync", type: Boolean, default: false } ],
+
+            tasks: [
+                getClientMetrics 
+            ],
+
+            postActions: [ 
+                syncClientCache
+            ]
         }
 
-        params.tasks = [
-            shared.getAuthorityFromToken,
-            validate,
-            getClientMetrics
-        ];
-
-        rpcUtils.Executor(params).run(args);
+        rpcUtils.Workflow
+            .Executor(params)
+            .run(args);
     }
 
     function fetchSponsorMetrics_v1(args, rpcDone) {
 
         var params = {
-            logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalStatsEntity_v1,
+
             name: "Fetch Sponsor Metrics (v1)",
             code: "FSM01",
-            done: rpcDone
+            repr: lib.repr.ApprovalStatsEntity_v1,
+
+            authorizer: Authorizers.with('JOB:10'),
+
+            transport: seneca,
+            logLevel: args.get("logLevel", logLevel),
+            done: rpcDone,
+
+            required: [ /* No Args */ ],
+            optional: [ { field: "sync", type: Boolean, default: false } ],
+
+            tasks: [
+                getSponsorMetrics
+            ],
+
+            postActions: [ 
+                syncSponsorCache
+            ]
         }
 
-        params.tasks = [
-            shared.getAuthorityFromToken,
-            validate,
-            getSponsorMetrics
-        ];
-
-        rpcUtils.Executor(params).run(args);
-    }
-
-    function validate(console, state, done) {
-
-        console.info("Validate Client Request");
-
-        if(!state.has('person', Object))
-            return done({
-                name: "internalError",
-                message: "Failed to load authority." });
-
-        else if(!state.person.hasAuthority('JOB:10'))
-            return done({
-                name: "forbidden",
-                message: "Unable to complete request: Insufficient privileges" });
-
-        done(null, state);
+        rpcUtils.Workflow
+            .Executor(params)
+            .run(args);
     }
 
     function getClientMetrics(console, state, done) {
 
+        if(state.get('sync') === true)
+            return getClientMetrics_sync(console, state, done);
+
         console.info("Get Client Metrics");
 
-        var keys = lib.helpers.makeMetricKeys(env, {
-            client: state.person.clientId
-        });
+        var key = lib.helpers.makeMetricKeys({ clientId: state.$principal.clientId });
 
-        console.debug("Retrieving metrics with key: " + keys.client);
+        console.debug("Retrieving metrics with key: " + key);
 
-        redis.hgetall(keys.client, (err, result) => {
+        redis.hgetall(key, (err, result) => {
             if(err) 
                 return done({
                     name: 'internalError',
                     message: 'Failed to retrieve metrics.' });
 
-            if(!result)
-                return done({
-                    name: 'notFound',
-                    message: 'No metrics available.' });
+            else if(!result) {
+                state.set('sync', true);
+                return getClientMetrics_sync(console, state, done);
+            }
 
             state.set('statusRecord', result);
             done(null, state);
@@ -101,27 +108,119 @@ module.exports = function ApprovalMetricPlugin(opts) {
 
     function getSponsorMetrics(console, state, done) {
 
+        if(state.get('sync') === true)
+            return getSponsorMetrics_sync(console, state, done);
+
         console.info("Get Sponsor Metrics");
 
-        var keys = lib.helpers.makeMetricKeys(env, {
-            sponsor: state.person.sponsorId
-        });
+        var key = lib.helpers.makeMetricKeys({ sponsorId: state.$principal.sponsorId });
 
-        console.debug("Retrieving metrics with key: " + keys.sponsor);
+        console.debug("Retrieving metrics with key: " + key);
 
-        redis.hgetall(keys.sponsor, (err, result) => {
+        redis.hgetall(key, (err, result) => {
             if(err) 
                 return done({
                     name: 'internalError',
                     message: 'Failed to retrieve metrics.' });
 
-            if(!result)
-                return done({
-                    name: 'notFound',
-                    message: 'No metrics available.' });
+            else if(!result) {
+                state.set('sync', true);
+                return getSponsorMetrics_sync(console, state, done);
+            }
 
             state.set('statusRecord', result);
             done(null, state);
         });
     }
+
+    function getSponsorMetrics_sync(console, state, done) {
+
+        models.Requests.query((q) => {
+            return q
+                .select('disposition')
+                .count('jobId')
+                .innerJoin('approvalService_person', 'approvalService_request.authorId', 'approvalService_person.id')
+                .where('approvalService_person.sponsorId', state.$principal.sponsorId)
+                .groupBy('approvalService_request.disposition')
+        })
+
+        .fetch().then((m) => {
+            var result = {};
+            for(var r of m.models)
+                result[r.get('disposition')] = r.get('count(`jobId`)');
+            state.set('statusRecord', result);
+            return done(null, state);
+        }, (e) => {
+            return done({
+                name: 'internalError',
+                message: 'Failed to fetch metrics.',
+                innerError: e.message 
+            });
+        });
+
+    }
+
+    function getClientMetrics_sync(console, state, done) {
+
+        models.Requests.query((q) => {
+            return q
+                .select('disposition')
+                .count('jobId')
+                .innerJoin('approvalService_person', 'approvalService_request.authorId', 'approvalService_person.id')
+                .where('approvalService_person.clientId', state.$principal.clientId)
+                .groupBy('approvalService_request.disposition')
+        })
+
+        .fetch().then((m) => {
+            var result = {};
+            for(var r of m.models)
+                result[r.get('disposition')] = r.get('count(`jobId`)');
+            state.set('statusRecord', result);
+            return done(null, state);
+        }, (e) => {
+            return done({
+                name: 'internalError',
+                message: 'Failed to fetch metrics.',
+                innerError: e.message 
+            });
+        });
+
+    }
+
+    function syncClientCache(console, state, done) {
+
+        if(state.get('sync') !== true)
+            return done(null, state);
+
+        console.info("Update Client Metrics");
+
+        var key = lib.helpers.makeMetricKeys({ clientId: state.$principal.clientId });
+
+        console.debug("Writing metrics with key: " + key);
+
+        redis.multi()
+            .hset(key, lib.disposition.PENDING, state.get('statusRecord.pending', 0))
+            .hset(key, lib.disposition.APPROVED, state.get('statusRecord.approved', 0))
+            .hset(key, lib.disposition.DECLINED, state.get('statusRecord.declined', 0))
+            .exec(()=>done(null, state));
+    }
+
+    function syncSponsorCache(console, state, done) {
+
+        if(state.get('sync') !== true)
+            return done(null, state);
+
+        console.info("Update Sponsor Metrics");
+
+        var key = lib.helpers.makeMetricKeys({ sponsorId: state.$principal.sponsorId });
+
+        console.debug("Writing metrics with key: " + key);
+
+        redis.multi()
+            .hset(key, lib.disposition.PENDING, state.get('statusRecord.pending', 0))
+            .hset(key, lib.disposition.APPROVED, state.get('statusRecord.approved', 0))
+            .hset(key, lib.disposition.DECLINED, state.get('statusRecord.declined', 0))
+            .exec(()=>done(null, state));
+    }
+
 };

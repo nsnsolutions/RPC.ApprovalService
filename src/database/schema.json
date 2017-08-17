@@ -1,33 +1,6 @@
 {
     "schema": {
 
-        "disposition": {
-
-            "columns": [
-                { 
-                    "name": "id",
-                    "type": "varchar",
-                    "length": 128,
-                    "primary_key": true,
-                    "nullable": false,
-                    "unique": true 
-                }, { 
-                    "name": "name",
-                    "type": "varchar",
-                    "length": 32,
-                    "unique": true,
-                    "nullable": false 
-                }
-            ],
-
-            "indexes": [ 
-                { 
-                    "name": "idx_disposition_name",
-                    "columns": "name"
-                }
-            ]
-        },
-
         "person": {
 
             "columns": [
@@ -58,6 +31,11 @@
                     "type": "varchar",
                     "length": 256,
                     "nullable": false
+                }, {
+                    "name": "isApprover",
+                    "type": "boolean",
+                    "nullable": false,
+                    "default": false
                 }
             ],
 
@@ -68,33 +46,20 @@
                 },{
                     "name": "idx_person_clientId" ,
                     "columns": [ "sponsorId", "clientId" ]
+                },{
+                    "name": "idx_person_approver" ,
+                    "columns": "isApprover"
                 }
             ]
         },
 
-        "approval": {
+        "request": {
             "columns": [
                 { 
-                    "name": "id",
-                    "type": "varchar",
-                    "length": 128,
-                    "primary_key": true,
-                    "unique": true,
-                    "nullable": false
-                }, { 
-                    "name": "sponsorId",
-                    "type": "varchar",
-                    "length": 128,
-                    "nullable": false
-                }, { 
-                    "name": "clientId",
-                    "type": "varchar",
-                    "length": 128,
-                    "nullable": false
-                }, { 
                     "name": "jobId",
                     "type": "varchar",
                     "length": 128,
+                    "primary_key": true,
                     "unique": true,
                     "nullable": false
                 }, { 
@@ -112,13 +77,19 @@
                     "length": 512
                 }, { 
                     "name": "price",
-                    "type": "varchar",
-                    "length": 16
+                    "type": "decimal",
+                    "percision": 16,
+                    "scale": 2
                 }, { 
                     "name": "quantity",
                     "type": "integer",
                     "nullable": false,
                     "default": 0
+                }, {
+                    "name": "disposition",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
                 }, { 
                     "name": "comments",
                     "type": "varchar",
@@ -132,26 +103,19 @@
                     "name": "approverId",
                     "type": "varchar",
                     "length": 128,
-                    "nullable": false
+                    "nullable": true
                 }, {
-                    "name": "dispositionId",
-                    "type": "varchar",
-                    "length": 128,
-                    "nullable": false
+                    "name": "completed_at",
+                    "type": "dateTime",
+                    "nullable": true
                 }
 
             ],
 
-            "indexes": [ 
-                { 
+            "indexes": [
+                {
                     "name": "idx_approval_jobId" ,
                     "columns": "jobId"
-                },{ 
-                    "name": "idx_approval_sponsorId",
-                    "columns": "sponsorId"
-                },{
-                    "name": "idx_approval_clientId",
-                    "columns": [ "sponsorId", "clientId" ]
                 }
             ],
 
@@ -163,10 +127,6 @@
                 }, {
                     "columns": "approverId",
                     "foreign_table": "person",
-                    "foreign_columns": "id"
-                }, {
-                    "columns": "dispositionId",
-                    "foreign_table": "disposition",
                     "foreign_columns": "id"
                 }
             ],

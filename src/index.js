@@ -10,6 +10,8 @@ const schemaPath = require('path').join(__dirname, './database')
 const rpcUtils = require('rpc-utils');
 
 const lib = require('./lib');
+const Upsert = require('./lib/bookshelf-upsert');
+const Models = require('./lib/Models');
 const services = require('./services');
 
 module.exports = function RPC_ApprovalService(App) {
@@ -42,7 +44,7 @@ module.exports = function RPC_ApprovalService(App) {
         knexClient = Knex({
             client: conf.shared.rdsUrl.split(':').shift(),
             connection: conf.shared.rdsUrl,
-            //debug: true
+            debug: true
         });
 
         var startupTasks = [
@@ -96,18 +98,21 @@ module.exports = function RPC_ApprovalService(App) {
     function installPlugins(bus, conf, callback) {
 
         var bookshelf = Bookshelf(knexClient);
+        bookshelf.plugin(Upsert);
 
         var params = {
             logLevel: conf.shared.logLevel,
             redisClient: redisClient,
-            models: lib.Models(bookshelf),
+            bookshelf: bookshelf,
+            models: Models(bookshelf)
         };
 
-        //bus.use(services.ApprovalCreatePlugin, params);
-        //bus.use(services.ApprovalMetricPlugin, params);
+        bus.use(services.ProxyPlugin, params);
+        bus.use(services.ApprovalCreatePlugin, params);
+        bus.use(services.ApprovalFetchPlugin, params);
+        bus.use(services.ApprovalCompletePlugin, params);
+        bus.use(services.ApprovalMetricPlugin, params);
         //bus.use(services.ApprovalListPlugin, params);
-        //bus.use(services.ApprovalFetchPlugin, params);
-        //bus.use(services.ApprovalCompletePlugin, params);
 
         callback();
     }

@@ -1,43 +1,73 @@
 'use strict';
 
 var lodash = require('lodash');
+//var moment = require('moment');
+//var rpcUtils = require('rpc-utils');
 
 module.exports = Models;
 
 function Models(bookshelf) {
 
-    /* Tables */
-
-    var Approval = bookshelf.Model.extend({ 
-        tableName: 'approvalService_approval',
-        idAttribute: 'id',
-        hasTimestamps: [ "created_at", "updated_at", ],
-    });
-
-    var Disposition = bookshelf.Model.extend({ 
-        tableName: 'approvalService_disposition',
-        idAttribute: 'id',
-    });
-
     var Person = bookshelf.Model.extend({ 
         tableName: 'approvalService_person',
         idAttribute: 'id',
+        requests: function() { return this.hasMany(Request) },
+
+        serialize_v1: function() { 
+
+            var ret = lodash.pick(this.attributes, [
+                'sponsorId',
+                'clientId',
+                'email',
+                'fullName'
+            ]);
+
+            ret.userId = this.attributes.id;
+
+            return ret;
+        }
     });
 
-    /* Collections */
-    var Approvals = bookshelf.Collection.extend({ model: Approval });
-    var Dispositions = bookshelf.Collection.extend({ model: Disposition });
-    var Persons  = bookshelf.Collection.extend({ model: Person });
+    var Request = bookshelf.Model.extend({ 
+        tableName: 'approvalService_request',
+        idAttribute: 'jobId',
+        hasTimestamps: [ "created_at", "updated_at", ],
+        author: function() { return this.belongsTo(Person, "authorId"); },
+        approver: function() { return this.belongsTo(Person, "approverId"); },
+
+        serialize_v1: function() { 
+
+            var ret = lodash.pick(this.attributes, [
+                'disposition',
+                'type',
+                'jobId',
+                'jobUniqueId',
+                'title',
+                'price',
+                'quantity',
+                'comments',
+            ]);
+
+            ret.requestDate = this.attributes.created_at;
+            ret.completeDate = this.attributes.completed_at || null;
+
+            if(this.relations) {
+                ret.author = this.relations.author && this.relations.author.serialize_v1() || null;
+                ret.completedBy = this.relations.approver && this.relations.approver.serialize_v1() || null;
+            }
+
+            return ret;
+        }
+
+    });
 
     return {
         /* Tables */
-        Approval: Approval,
-        Disposition: Disposition,
+        Request: Request,
         Person: Person,
 
         /* Collections */
-        Approvals: Approvals,
-        Dispositions: Dispositions,
-        Persons: Persons,
+        Requests: bookshelf.Collection.extend({ model: Request }),
+        Persons: bookshelf.Collection.extend({ model: Person })
     }
 }

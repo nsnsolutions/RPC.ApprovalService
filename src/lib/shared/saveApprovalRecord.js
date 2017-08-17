@@ -1,10 +1,11 @@
 'use strict';
 
-module.exports = function saveApprovalRecord(seneca, opts) {
+module.exports = function saveApprovalRecord(opts) {
 
-    var shared = this,
-        approvalTable = opts.tables.approval,
-        logLevel = opts.logLevel
+    var seneca = this,
+        models = opts.models,
+        bookshelf = opts.bookshelf,
+        logLevel = opts.logLevel;
 
     return handler;
 
@@ -14,19 +15,30 @@ module.exports = function saveApprovalRecord(seneca, opts) {
 
         console.info("Save Approval Record");
 
-        var params = {
-            item: state.approvalRecord,
-            logLevel: console.logLevel
-        };
+        state.approvalRecord.upsert().then(success, error);
 
-        approvalTable.save(params, (err) => {
-            if(err) 
-                return done({
-                    name: "internalError",
-                    message: "Failed to save approval record.",
-                    innerError: err });
+        function success(model) {
 
-            done(null, state);
-        });
+            var params = {
+                withRelated: [ 'author', 'approver' ]
+            };
+
+            // Re-fetch to load in relations and get the timestamps.
+            state.approvalRecord.refresh(params).then((m) => {
+                state.set('approvalRecord', model);
+                done(null, state);
+            }, error);
+        }
+
+        function error(err) {
+            done({
+                name: 'internalError',
+                message: "Failed to create request.",
+                innerError: {
+                    "code": err.code,
+                    "message": err.message
+                }
+            });
+        }
     }
 }

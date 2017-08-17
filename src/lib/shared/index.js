@@ -2,9 +2,9 @@
 
 const commons = require('require-dir')('.');
 
-module.exports = function Common(trans, opts) {
+module.exports = function Common(opts) {
 
-    var self = {};
+    var self = Object.create(this) || {};
 
     init();
 
@@ -14,6 +14,6 @@ module.exports = function Common(trans, opts) {
 
     function init() {
         for(var name in commons)
-            self[name] = commons[name].call(self, trans, opts);
+            self[name] = commons[name].call(self, opts);
     }
 };

@@ -5,5 +5,6 @@ module.exports = {
     ApprovalMetricPlugin: require('./approvalMetric'),
     ApprovalListPlugin: require('./approvalList'),
     ApprovalCompletePlugin: require('./approvalComplete'),
-    ApprovalFetchPlugin: require('./approvalFetch')
+    ApprovalFetchPlugin: require('./approvalFetch'),
+    ProxyPlugin: require('./proxy')
 };

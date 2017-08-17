@@ -2,10 +2,9 @@
 
 const rpcUtils = require('rpc-utils');
 
-module.exports = function getAuthorityFromToken(seneca, opts) {
+module.exports = function getAuthorityFromToken(opts) {
 
-    var shared = this,
-        proxy = opts.proxy,
+    var seneca = this,
         logLevel = opts.logLevel;
 
     return handler;
@@ -14,6 +13,10 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
 
     function handler(console, state, done) {
 
+        console.error("NOT IMPLEMENTED - shared.getAuthorityFromToken");
+        done(null, state);
+
+        /*
         console.info("Get Authority From Token");
 
         if(!state.has('token', String))
@@ -41,5 +44,6 @@ module.exports = function getAuthorityFromToken(seneca, opts) {
             state.set("person", person);
             return done(null, state);
         });
+        */
     }
 }
