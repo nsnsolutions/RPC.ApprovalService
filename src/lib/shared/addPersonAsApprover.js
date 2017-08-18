@@ -15,10 +15,11 @@ module.exports = function addPersonAsApprover(opts) {
 
     function handler(console, state, done) {
 
-        console.info("Adding user to list of approvers.");
+        console.info("Adding user as approver.");
 
         models.Person.forge({
-            id: state.$principal.userId,
+            id: helpers.principal2key($principal),
+            userId: $principal.userId,
             sponsorId: state.$principal.sponsorId,
             clientId: state.$principal.clientId,
             fullName: state.$principal.fullName,
