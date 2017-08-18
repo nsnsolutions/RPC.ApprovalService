@@ -24,6 +24,7 @@ const q = require('q');
 const rpcUtils = require('rpc-utils');
 const Upsert = require('../src/lib/bookshelf-upsert');
 const Models = require('../src/lib/Models');
+const helpers = require('../src/lib/helpers');
 
 /** PROTO **/
 var getConfigs = q.async(_getConfigs);
@@ -74,7 +75,11 @@ function *main() {
             persons.add(lodash.transform(result.Items, (ret, rec)=>{
                 if(rec.completedBy && rec.completedBy.userId) {
                     ret.push(new models.Person({
-                        id: rec.completedBy.userId,
+                        id: helpers.makePersonKey(
+                            rec.completedBy.sponsorId,
+                            rec.completedBy.clientId,
+                            rec.completedBy.userId),
+                        userId: rec.completedBy.userId,
                         sponsorId: rec.completedBy.sponsorId,
                         clientId: rec.completedBy.clientId,
                         fullName: rec.completedBy.fullName,
@@ -86,7 +91,11 @@ function *main() {
 
             persons.add(lodash.transform(result.Items, (ret, rec)=>{
                 ret.push(new models.Person({
-                    id: rec.author.userId,
+                    id: helpers.makePersonKey(
+                        rec.author.sponsorId,
+                        rec.author.clientId,
+                        rec.author.userId),
+                    userId: rec.author.userId,
                     sponsorId: rec.author.sponsorId,
                     clientId: rec.author.clientId,
                     fullName: rec.author.fullName,
@@ -104,8 +113,16 @@ function *main() {
                     quantity: rec.quantity || 1,
                     disposition: rec.disposition,
                     comments: rec.comments || null,
-                    authorId: rec.author.userId,
-                    approverId: rec.completedBy && rec.completedBy.userId && rec.completedBy.userId || null ,
+                    authorId: helpers.makePersonKey(
+                        rec.author.sponsorId,
+                        rec.author.clientId,
+                        rec.author.userId ),
+                    approverId: rec.completedBy &&
+                        rec.completedBy.userId &&
+                        helpers.makePersonKey(
+                            rec.completedBy.sponsorId,
+                            rec.completedBy.clientId,
+                            rec.completedBy.userId) || null ,
                     completed_at: rpcUtils.helpers.toDate(rec.completeDate),
                     created_at: rpcUtils.helpers.toDate(rec.requestDate),
                     updated_at: rpcUtils.helpers.toDate(rec.updateDate),
