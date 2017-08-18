@@ -7,7 +7,7 @@
                 { 
                     "name": "id",
                     "type": "varchar",
-                    "length": 512,
+                    "length": 64,
                     "primary_key": true,
                     "nullable": false,
                     "unique": true
