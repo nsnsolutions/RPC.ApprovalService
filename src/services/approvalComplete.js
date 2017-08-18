@@ -24,21 +24,23 @@ module.exports = function ApprovalCompletePlugin(opts) {
          * Finalize an approval request.
          *
          * Args:
-         *
+         * - jobIds: An array of jobs to finzlize.
+         * - disposition: once of: approved, declined
+         * - comments: string comments to associate with the dispossition
+         *   (optional)
          */
 
         var params = {
+
             name: "Finalize Approval Request (v1)",
             code: "FAR01",
-            //repr: lib.repr.FinalizeResponseEntity_v1,
+            repr: lib.repr.FinalizeResponseEntity_v1,
 
             authorizer: Authorizers.with('JOB:30'),
 
             transport: seneca,
             logLevel: args.get("logLevel", logLevel),
             done: rpcDone,
-
-            context: { jobId: args.jobId },
 
             required: [
                 { field: 'jobIds', type: Array },
@@ -57,7 +59,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
                 updateApprovalMetrics,
             ],
 
-            postActions: [ 
+            postActions: [
                 finalizeJob
             ]
         }
