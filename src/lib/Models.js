@@ -52,8 +52,16 @@ function Models(bookshelf) {
             ret.completeDate = this.attributes.completed_at || null;
 
             if(this.relations) {
-                ret.author = this.relations.author && this.relations.author.serialize_v1() || null;
-                ret.completedBy = this.relations.approver && this.relations.approver.serialize_v1() || null;
+
+                ret.author = this.relations.author &&
+                    this.relations.author.id &&
+                    this.relations.author.serialize_v1() ||
+                    null;
+
+                ret.completedBy = this.relations.approver &&
+                    this.relations.approver.id &&
+                    this.relations.approver.serialize_v1() ||
+                    null;
             }
 
             return ret;
@@ -67,7 +75,17 @@ function Models(bookshelf) {
         Person: Person,
 
         /* Collections */
-        Requests: bookshelf.Collection.extend({ model: Request }),
-        Persons: bookshelf.Collection.extend({ model: Person })
+        Requests: bookshelf.Collection.extend({
+            model: Request,
+            serialize_v1: function() {
+                return lodash.map(this.models, v=>v.serialize_v1());
+            }
+        }),
+        Persons: bookshelf.Collection.extend({ 
+            model: Person,
+            serialize_v1: function() {
+                return lodash.map(this.models, v=>v.serialize_v1());
+            }
+        })
     }
 }

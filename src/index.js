@@ -44,7 +44,7 @@ module.exports = function RPC_ApprovalService(App) {
         knexClient = Knex({
             client: conf.shared.rdsUrl.split(':').shift(),
             connection: conf.shared.rdsUrl,
-            debug: true
+            //debug: true
         });
 
         var startupTasks = [
@@ -112,7 +112,7 @@ module.exports = function RPC_ApprovalService(App) {
         bus.use(services.ApprovalFetchPlugin, params);
         bus.use(services.ApprovalCompletePlugin, params);
         bus.use(services.ApprovalMetricPlugin, params);
-        //bus.use(services.ApprovalListPlugin, params);
+        bus.use(services.ApprovalListPlugin, params);
 
         callback();
     }
