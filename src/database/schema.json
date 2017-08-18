@@ -7,10 +7,16 @@
                 { 
                     "name": "id",
                     "type": "varchar",
-                    "length": 128,
+                    "length": 512,
                     "primary_key": true,
                     "nullable": false,
                     "unique": true
+                }, {
+                    "name": "userId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false,
+                    "unique": false
                 }, {
                     "name": "sponsorId",
                     "type": "varchar",
