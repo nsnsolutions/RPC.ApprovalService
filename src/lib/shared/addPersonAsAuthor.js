@@ -1,5 +1,7 @@
 'use strict';
 
+const helpers = require('../helpers');
+
 module.exports = function addPersonAsAuthor(opts) {
 
     var seneca = this,
@@ -13,8 +15,11 @@ module.exports = function addPersonAsAuthor(opts) {
 
     function handler(console, state, done) {
 
+        console.info("Adding user as author.");
+
         models.Person.forge({
-            id: state.$principal.userId,
+            id: helpers.principal2key($principal),
+            userId: $principal.userId,
             sponsorId: state.$principal.sponsorId,
             clientId: state.$principal.clientId,
             fullName: state.$principal.fullName,

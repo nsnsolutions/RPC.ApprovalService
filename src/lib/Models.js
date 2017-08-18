@@ -19,10 +19,9 @@ function Models(bookshelf) {
                 'sponsorId',
                 'clientId',
                 'email',
-                'fullName'
+                'fullName',
+                'userId'
             ]);
-
-            ret.userId = this.attributes.id;
 
             return ret;
         }

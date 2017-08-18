@@ -1,0 +1,12 @@
+{
+  "etcdKeys": {
+    "rdsUrl": "/config/shared/rdsUrl",
+    "region": "/config/shared/region",
+    "approvalTable": "/config/services/ApprovalService/approvalTableName"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "node-etcd": "^5.1.0",
+    "q": "^1.5.0"
+  }
+}
