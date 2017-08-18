@@ -3,13 +3,11 @@
 const dispositions = require('../disposition');
 const helpers = require('../helpers');
 
-module.exports = function incDeclinedCount(seneca, opts) {
+module.exports = function incDeclinedCount(opts) {
 
-    var shared = this,
-        env = opts.env,
-        approvalTable = opts.tables.approval,
+    var seneca = this,
         redis = opts.redisClient,
-        logLevel = opts.logLevel
+        logLevel = opts.logLevel;
 
     return handler;
 
@@ -19,15 +17,16 @@ module.exports = function incDeclinedCount(seneca, opts) {
 
         console.info("Increment Declined Count");
 
-        var keys = helpers.makeMetricKeys(env, {
-            sponsor: state.person.sponsorId,
-            client: state.person.clientId });
+        var keys = {
+            sponsor: helpers.makeMetricKeys({ sponsorId: state.$principal.sponsorId }),
+            client: helpers.makeMetricKeys({ clientId: state.$principal.clientId })
+        };
 
         var n = state.get('count', 1);
 
         redis.multi()
 
-            // Move record from pending
+            // Remove count from pending
             .hincrby(keys.sponsor, dispositions.PENDING, (n * -1))
             .hincrby(keys.client, dispositions.PENDING, (n * -1))
 

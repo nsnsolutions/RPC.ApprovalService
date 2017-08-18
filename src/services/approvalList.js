@@ -2,41 +2,57 @@
 
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
-const AWS = require('aws-sdk');
 const lodash = require('lodash');
+const Authorizers = rpcUtils.Principal.Authorizers;
+
+const sortFields = {
+    'jobId': 'jobId',
+    'price': 'price',
+    'quantity': 'quantity',
+    'title': 'title',
+    'type': 'type',
+    'disposition': 'disposition',
+    'updateDate': 'updated_at',
+    'requestDate': 'created_at',
+    'completeDate': 'completed_at',
+    'jobUniqueId': 'jobUniqueId',
+    'author.fullName': 'author.fullName',
+    'completedBy.fullName': 'approver.fullName'
+};
+
+const dateFields = {
+    'updateDate': 'updated_at',
+    'requestDate': 'created_at',
+    'completeDate': 'completed_at',
+};
+
+const sortDirs = {
+    'asc': 'asc',
+    'ascending': 'asc',
+    'desc': 'desc',
+    'descending': 'desc'
+};
+
+const OPERATORS = {
+    "EQ": "=",
+    "LT": "<",
+    "LE": "<=",
+    "GT": ">",
+    "GE": ">=",
+    "BEGINSWITH": "like",
+    "BETWEEN": "BETWEEN",
+    "CONTAINS": "like",
+    "IN": "IN"
+};
+
 
 module.exports = function ApprovalListPlugin(opts) {
 
     var seneca = this,
-        env = opts.env,
         shared = lib.shared(seneca, opts),
         redis = opts.redisClient,
-        ddb = new AWS.DynamoDB.DocumentClient({ service: opts.dynamoClient }),
-        approvalTableName = opts.tables.approval.tableName,
+        models = opts.models,
         logLevel = opts.logLevel;
-
-    // author, approver
-    const sortFields = [
-        'jobId',
-        'price',
-        'quantity',
-        'title',
-        'type',
-        'disposition',
-        'updateDate',
-        'requestDate',
-        'completeDate',
-        'jobUniqueId',
-        'author.fullName',
-        'completedBy.fullName'
-    ];
-
-    const sortDirs = {
-        'asc': 'ascending',
-        'desc': 'descending',
-        'ascending': 'ascending',
-        'descending': 'descending'
-    };
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:listClientApprovalRecords.v1', listClientApprovalRecords_v1);
     seneca.rpcAdd('role:approvalService.Pub,cmd:listSponsorApprovalRecords.v1', listSponsorApprovalRecords_v1);
@@ -45,375 +61,439 @@ module.exports = function ApprovalListPlugin(opts) {
 
     // ------------------------------------------------------------------------
 
-    function listClientApprovalRecords_v1(args, rpcDone) {
-        var params = {
-            logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.ApprovalListEntity_v1,
-            name: "List Client Approval Records (v1)",
-            code: "LCAR01",
-            done: rpcDone
-        }
-
-        params.tasks = [
-            shared.getAuthorityFromToken,
-            validate,
-            getClientRecords,
-            getClientApprovers,
-            sortResults,
-            getSetOfJobIds,
-            paginateResults
-        ];
+    function listSponsorApprovalRecords_v1(args, rpcDone) {
 
         rpcUtils.Executor(params).run(args);
-    }
 
-    function listSponsorApprovalRecords_v1(args, rpcDone) {
+        /*
+         * Search, Sort, and page approval records as associated with the
+         * current sponsor.
+         *
+         * Args:
+         * - pageSize: The count of items in the paginated result
+         * - pageIndex: The current page of the paginated result.
+         * - dateField: The date field used for date fitering and default sort
+         * - startDate: The first date to start looking for records.
+         * - endDate: The last date to look for records.
+         * - sortBy: The field to sort the result set by.
+         * - sortDir: The direction the sort should be done.
+         * - filterBy: Other filter criteria.
+         */
+
         var params = {
-            logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.passthru,
+
             name: "List Sponsor Approval Records (v1)",
             code: "LSAR01",
-            done: rpcDone
+            repr: lib.repr.ApprovalListEntity_v1,
+
+            authorizer: Authorizers.with('JOB:30'),
+
+            transport: seneca,
+            logLevel: args.get("logLevel", logLevel),
+            done: rpcDone,
+
+            // This is used by the query builder to filter.
+            accountFilterField: 'sponsorId',
+
+            required: [ /* No Required Fields */ ],
+
+            optional: [
+
+                // Set the number of items in 1 page of data.
+                {
+                    field: "pageSize",
+                    type: Number,
+                    customValidator: i=>i>0,
+                    default: 10
+                },
+
+                // Select the page number to return. Zero based list. The first
+                // page is index zero.
+                {
+                    field: "pageIndex",
+                    type: Number,
+                    customValidator: i=>i>0,
+                    default: 1
+                },
+
+                // Select the date field (requestDate, completeDate,
+                // updateDate) used to apply range filters.
+                {
+                    field: "dateField",
+                    type: String,
+                    regex: `^${Object.keys(dateFields).join("|")}$`,
+                    default: "requestDate"
+                },
+
+                // When provided, limits data to only requests after the value
+                // stored in the column identified in dateField
+                {
+                    field: "startDate",
+                    type: String,
+                    customValidator: d=>!isNaN(rpcUtils.helpers.toDate(d).getTime()),
+                    default: '1900-01-01'
+                },
+
+                // When provided, limits data to only requests before the value
+                // stored in the column identified in dateField
+                {
+                    field: "endDate",
+                    type: String,
+                    customValidator: d=>!isNaN(rpcUtils.helpers.toDate(d).getTime()),
+                    default: rpcUtils.helpers.fmtDate()
+                },
+
+                // The name of a field defined in ApprovalEntity model used to
+                // sort the items array.
+                {
+
+                    field: "sortBy",
+                    type: String,
+                    regex: `^${Object.keys(sortFields).join("|")}$`
+                },
+
+                // A value indicating the sort direction. One of: "ascending",
+                // "descending"
+                {
+                    field: "sortDir",
+                    type: String,
+                    regex: `^${Object.keys(sortDirs).join("|")}$`,
+                    default: 'asc'
+                },
+
+                // Filter String (see below). Defines additional limiting
+                // filters to apply to the query.
+                {
+                    field: "filterBy",
+                    type: String,
+                    customValidator: checkFilterBy
+                },
+            ],
+
+            tasks: [
+                translateToDatabaseFields,
+                fetchRequests,
+                fetchAllJobIds,
+                fetchAllApprovers
+            ],
+
+            postActions: [ /* No Post Actions */ ]
         }
 
-        params.tasks = [
-            shared.getAuthorityFromToken,
-            validate,
-            getSponsorRecords,
-            getSponsorApprovers,
-            sortResults,
-            getSetOfJobIds,
-            paginateResults
-        ];
-
-        rpcUtils.Executor(params).run(args);
+        rpcUtils.Workflow
+            .Executor(params)
+            .run(args);
     }
 
-    function validate(console, state, done) {
+    function listClientApprovalRecords_v1(args, rpcDone) {
 
         /*
-         * pageSize: Integer. Set the number of items in 1 page of data.
-         * pageIndex: Integer. Select the page number to return. Zero based list. The first page is index zero.
+         * Search, Sort, and page approval records as associated with the
+         * current client.
          *
-         * dateField: Select the date field (requestDate, completeDate, updateDate) used to apply range filters.
-         * startDate: ISO8601 String. When provided, limits data to only requests created after this date.
-         * endDate: ISO8601 String. When provided, limits data to only requests create before this date.
-         *
-         * sortBy: String. The name of a field defined in ApprovalEntity model used to sort the items array.
-         * sortDir: String. A value indicating the sort direction. One of: "ascending", "descending"
-         * filterBy: Filter String (see below). Defines additional limiting filters to apply to the query.
+         * Args:
+         * - pageSize: The count of items in the paginated result
+         * - pageIndex: The current page of the paginated result.
+         * - dateField: The date field used for date fitering and default sort
+         * - startDate: The first date to start looking for records.
+         * - endDate: The last date to look for records.
+         * - sortBy: The field to sort the result set by.
+         * - sortDir: The direction the sort should be done.
+         * - filterBy: Other filter criteria.
          */
 
-        console.info("Validating Client request.");
+        var params = {
 
-        /*
-         * Start with normalizing the date filters if they are given.
-         */
+            name: "List Client Approval Records (v1)",
+            code: "LCAR01",
+            repr: lib.repr.ApprovalListEntity_v1,
 
-        if(state.has('startDate'))
-            state.set('startDate', rpcUtils.helpers.fmtDate(state.startDate));
+            authorizer: Authorizers.with('JOB:30'),
 
-        if(state.has('endDate'))
-            state.set('endDate', rpcUtils.helpers.fmtDate(state.endDate));
+            transport: seneca,
+            logLevel: args.get("logLevel", logLevel),
+            done: rpcDone,
 
-        /*
-         * Normalize filterBy param if they are given.
-         */
+            // This is used by the query builder to filter.
+            accountFilterField: 'clientId',
 
-        var _filterBy = rpcUtils.FilterHelper.parseFilterString(state.get('filterBy', ""));
+            required: [ /* No Required Fields */ ],
 
-        /*
-         * Verify we know who is making this request.
-         */
+            optional: [
 
-        if(!state.has('person', Object))
-            return done({
-                name: "internalError",
-                message: "Failed to load authority." });
+                // Set the number of items in 1 page of data.
+                {
+                    field: "pageSize",
+                    type: Number,
+                    customValidator: i=>i>0,
+                    default: 10
+                },
 
-        /*
-         * Pagination
-         */
+                // Select the page number to return. Zero based list. The first
+                // page is index zero.
+                {
+                    field: "pageIndex",
+                    type: Number,
+                    customValidator: i=>i>0,
+                    default: 1
+                },
 
-        else if(state.has('pageIndex') && !state.has('pageSize'))
-            return done({
-                name: 'badRequest',
-                message: 'Missing required field: pageSize' });
+                // Select the date field (requestDate, completeDate,
+                // updateDate) used to apply range filters.
+                {
+                    field: "dateField",
+                    type: String,
+                    regex: `^${Object.keys(dateFields).join("|")}$`,
+                    default: "requestDate"
+                },
 
-        if(state.has('pageSize') && !state.has('pageSize', Number))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: pageSize. Expected: Number' });
+                // When provided, limits data to only requests after the value
+                // stored in the column identified in dateField
+                {
+                    field: "startDate",
+                    type: String,
+                    customValidator: d=>!isNaN(rpcUtils.helpers.toDate(d).getTime()),
+                    default: '1900-01-01'
+                },
 
-        else if(state.has('pageSize') && state.pageSize <= 0)
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: pageSize. Expected: Positive, Non-Zero' });
+                // When provided, limits data to only requests before the value
+                // stored in the column identified in dateField
+                {
+                    field: "endDate",
+                    type: String,
+                    customValidator: d=>!isNaN(rpcUtils.helpers.toDate(d).getTime()),
+                    default: rpcUtils.helpers.fmtDate()
+                },
 
-        else if(state.has('pageIndex') && !state.has('pageIndex', Number))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: pageIndex. Expected: Number' });
+                // The name of a field defined in ApprovalEntity model used to
+                // sort the items array.
+                {
 
-        else if(state.has('pageIndex') && state.pageIndex < 1)
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: pageIndex. Expected: Positive, Non-Zero' });
+                    field: "sortBy",
+                    type: String,
+                    regex: `^${Object.keys(sortFields).join("|")}$`
+                },
 
-        /*
-         * Date Filtering
-         */
+                // A value indicating the sort direction. One of: "ascending",
+                // "descending"
+                {
+                    field: "sortDir",
+                    type: String,
+                    regex: `^${Object.keys(sortDirs).join("|")}$`,
+                    default: 'asc'
+                },
 
-        else if((state.has('startDate') || state.has('endDate')) && !state.has('dateField'))
-            return done({
-                name: 'badRequest',
-                message: 'Missing required field: dateField' });
+                // Filter String (see below). Defines additional limiting
+                // filters to apply to the query.
+                {
+                    field: "filterBy",
+                    type: String,
+                    customValidator: checkFilterBy
+                },
+            ],
 
-        else if(state.has('dateField') && !state.has('dateField', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: dateField. Expected: String' });
+            tasks: [
+                translateToDatabaseFields,
+                fetchRequests,
+                fetchAllJobIds,
+                fetchAllApprovers
+            ],
 
-        else if(state.has('startDate') && !state.has('startDate', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: startDate. Expected: String' });
+            postActions: [ /* No Post Actions */ ]
+        }
 
-        else if(state.has('startDate') && state.startDate === 'Invalid date')
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: startDate. Expected: Date as ISO8601' });
+        rpcUtils.Workflow
+            .Executor(params)
+            .run(args);
 
-        else if(state.has('endDate') && !state.has('endDate', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: endDate. Expected: String' });
 
-        else if(state.has('endDate') && state.endDate === 'Invalid date')
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: endDate. Expected: Date as ISO8601' });
+    }
 
-        /*
-         * Sorting
-         */
+    function translateToDatabaseFields(console, state, done) {
 
-        else if(state.has('sortDir') && !state.has('sortBy'))
-            return done({
-                name: 'badRequest',
-                message: 'Missing required field: sortBy' });
+        // SortBy is not required but should default to whatever dateField was
+        // selected.  Since date field is set pre-remap, we need to do this
+        // first and map the field after.
+        state.ensureExists('sortBy', state.dateField);
 
-        else if(state.has('sortBy') && !state.has('sortBy', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: sortBy. Expected: String' });
+        // Map each field to the actual database name of the field.
+        state.set('dateField', dateFields[state.dateField]);
+        state.set('sortDir', sortDirs[state.sortDir]);
+        state.set('sortBy', sortFields[state.sortBy]);
 
-        else if(state.has('sortBy') && sortFields.indexOf(state.sortBy) < 0)
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: sortBy. Expected: ' + sortFields.join(' ') });
-
-        else if(state.has('sortDir') && !state.has('sortDir', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: sortDir. Expected: String' });
-
-        else if(state.has('sortDir') && Object.keys(sortDirs).indexOf(state.sortDir) < 0)
-            return done({
-                name: 'badRequest',
-                message: 'Invalid value for field: sortDir. Expected: ascending or descending' });
-
-        /*
-         * Filtering
-         */
-
-        else if(state.has('filterBy') && !state.has('filterBy', String))
-            return done({
-                name: 'badRequest',
-                message: 'Wrong type for field: filterBy. Expected: String' });
-
-        else if(state.has('filterBy') && _filterBy === null)
-            return done({
-                name: 'badRequest',
-                message: 'invalid value for field: filterBy. See documentation for more information.' });
-
-        /*
-         * Set Defaults
-         */
-
-        state.ensureExists('pageIndex', 1);
-        state.ensureExists('sortBy', state.get('dateField', 'requestDate'));
-
-        if(_filterBy) 
-            state.set('filterBy', _filterBy);
-
-        if(state.has('sortDir'))
-            state.set('sortDir', sortDirs[state.sortDir]);
+        // Convert dates to native Date object
+        state.set('startDate', rpcUtils.helpers.toDate(state.startDate));
+        state.set('endDate', rpcUtils.helpers.toDate(state.endDate));
 
         done(null, state);
     }
 
-    function getSponsorRecords(console, state, done) {
+    function fetchRequests(console, state, done) {
 
-        console.info("Searching for sponsor records.");
+        var ac = this.accountFilterField;
 
-        var params = buildQuery({
-            indexName: 'sponsorId-jobId-index',
-            keyField: 'sponsorId',
-            keyValue: state.person.sponsorId
-        }, state);
+        var query = models.Requests.query((query) => {
 
-        getRecords(params, console, state, done);
-    }
+            var ret = query
+                .innerJoin('approvalService_person as author', 'approvalService_request.authorId', 'author.id')
+                .leftOuterJoin('approvalService_person as approver', 'approvalService_request.approverId', 'approver.id')
+                .where(`author.${ac}`, state.$principal[ac])
+                .whereBetween(state.dateField, [ state.startDate, state.endDate ])
+                .orderBy(state.sortBy, state.sortDir)
+                .limit(state.pageSize)
+                .offset(state.pageSize * (state.pageIndex - 1));
 
-    function getClientRecords(console, state, done) {
+            ret = applyFilterBy(ret, state.filterBy);
 
-        console.info("Searching for client records.");
+            console.debug("Fetch Requests:",ret.toString());
 
-        var params = buildQuery({
-            indexName: 'clientId-jobId-index',
-            keyField: 'clientId',
-            keyValue: state.person.clientId
-        }, state);
+            return ret;
+        });
 
-        getRecords(params, console, state, done);
-    }
-
-    function getRecords(query, console, state, done) {
-
-        console.debug("Running with query: ", query);
-
-        ddb.query(query, (err, data) => {
-
-            if(err) 
-                return done({
-                    name: "internalError",
-                    message: "Unable to retrieve records.",
-                    innerError: err
-                });
-
-            state.set('approvalRecords', data.Items);
+        query.fetch({ withRelated: [ 'author', 'approver' ] }).then((m) => {
+            state.set('approvalRecords', m);
             done(null, state);
-        });
+        }, (e)=>done({
+            name: 'internalError',
+            message: "Failed to fetch approval requests.",
+            innerError: e.message 
+        }));
+
     }
 
-    function buildQuery(opts, state) {
-        var query = new rpcUtils.FilterHelper({
-            TableName: approvalTableName,
-            IndexName: opts.indexName,
-            KeyConditionExpression: '#hkey = :hkey',
-            ExpressionAttributeNames: { '#hkey': opts.keyField },
-            ExpressionAttributeValues: { ':hkey': opts.keyValue }
+    function fetchAllJobIds(console, state, done) {
+
+        var ac = this.accountFilterField;
+
+        var query = models.Requests.query((query) => {
+
+            var ret = query
+                .select('jobId')
+                .select(state.sortBy)
+                .innerJoin('approvalService_person as author', 'approvalService_request.authorId', 'author.id')
+                .leftOuterJoin('approvalService_person as approver', 'approvalService_request.approverId', 'approver.id')
+                .where(`author.${ac}`, state.$principal[ac])
+                .whereBetween(state.dateField, [ state.startDate, state.endDate ])
+                .orderBy(state.sortBy, state.sortDir);
+
+            ret = applyFilterBy(ret, state.filterBy);
+
+            console.debug("Fetch All JobIds:",ret.toString());
+
+            return ret;
+
         });
 
-        /* Add Data filters if needed. */
-        if(state.has('startDate') && state.has('endDate'))
-            query.addFilter(state.dateField, 'BETWEEN', [ state.startDate, state.endDate ]);
-
-        else if(state.has('startDate'))
-            query.addFilter(state.dateField, '>=', [ state.startDate ]);
-
-        else if(state.has('endDate'))
-            query.addFilter(state.dateField, '<', [ state.endDate ]);
-
-        /* Add filterBy filters if needed. */
-        if(state.has('filterBy'))
-            query.addFilters(state.filterBy);
-
-        return query.compileQuery();
-    }
-
-    function getClientApprovers(console, state, done) {
-
-        console.info("Retrieving list of approvers for this client.")
-
-        var key = lib.helpers.makeApproverKeys(env, {
-            client: state.person.clientId }).client;
-
-        console.debug("Loading approvers from key: " + key);
-
-        redis.hgetall(key, (err, result) => {
-
-            if(err)
-                return done({
-                    name: 'internalError',
-                    message: 'Failed to retrieve list of approvers.',
-                    innerError: err });
-
-            console.log(result);
-            var approvers = [];
-            for(var p in result)
-                if(result.hasOwnProperty(p))
-                    approvers.push(JSON.parse(result[p]));
-
-            state.set('approverList', approvers);
-
+        query.fetch().then((m) => {
+            state.set('totalCount', m.models.length);
+            state.set('approvalRecordJobIds',
+                lodash.transform(m.models, (res, m)=>res.push(m.get('jobId')))
+            );
             done(null, state);
-        });
+        }, (e)=>done({
+            name: 'internalError',
+            message: "Failed to fetch approval requests.",
+            innerError: e.message 
+        }));
+
     }
 
-    function getSponsorApprovers(console, state, done) {
+    function fetchAllApprovers(console, state, done) {
 
-        console.info("Retrieving list of approvers for this sponsor.")
+        var ac = this.accountFilterField;
 
-        var key = lib.helpers.makeApproverKeys(env, {
-            sponsor: state.person.sponsorId }).sponsor;
+        var query = models.Persons.query((query) => {
 
-        console.debug("Loading approvers from key: " + key);
+            var ret = query
+                .where(ac, state.$principal[ac])
+                .where("isApprover", true);
 
-        redis.get(key, (err, result) => {
+            console.debug("Fetch All Approvers:",ret.toString());
 
-            if(err)
-                return done({
-                    name: 'internalError',
-                    message: 'Failed to retrieve list of approvers.',
-                    innerError: err });
+            return ret;
 
-            state.set('approverList', result && JSON.parse(result) || []);
+        });
 
+        query.fetch().then((m) => {
+            state.set('approverList', m);
             done(null, state);
+        }, (e)=>done({
+            name: 'internalError',
+            message: "Failed to fetch approver list.",
+            innerError: e.message 
+        }));
+
+    }
+
+    // ------------------------------------------------------------------------
+
+    function checkFilterBy(filterBy) {
+
+        var isValid = true;
+
+        if(typeof filterBy !== 'string')
+            return false;
+
+        lodash.forEach((filterBy).split(';'), (filterExp)=> {
+
+            var _parts = (filterExp || "").split(':');
+            var field = _parts.shift();
+            var opSel = (_parts.shift() || "").toUpperCase();
+            var oper = OPERATORS[opSel] || null;
+            var val = _parts.shift() || "";
+
+            if(field.length < 0)
+                isValid = false;
+
+            else if(oper === null)
+                isValid = false;
+
+            else if(val.length < 0)
+                isValid = false;
         });
+
+        return isValid;
     }
 
-    function sortResults(console, state, done) {
+    function applyFilterBy(query, filterBy) {
 
-        console.info("Sorting Results.");
+        lodash.forEach((filterBy || "").split(';'), (filterExp)=> {
 
-        var result = lodash.sortBy(
-            state.approvalRecords,
-            [ state.get('sortBy'), 'clientId' ]);
+            var _parts = (filterExp || "").split(':');
+            var field = _parts.shift();
+            var opSel = (_parts.shift() || "").toUpperCase();
+            var oper = OPERATORS[opSel];
+            var val = _parts.shift() || "";
 
-        if(state.get('sortDir', 'ascending') === 'descending')
-            state.set('approvalRecords', result.reverse());
-        else
-            state.set('approvalRecords', result);
+            switch(opSel) {
 
-        done(null, state);
-    }
+                case "BETWEEN":
+                    query.whereBetween(field, val.split(','));
+                    break;
 
-    function getSetOfJobIds(console, state, done) {
+                case "IN": 
+                    query.whereIn(field, val.split(','));
+                    break;
 
-        console.info("Loading list of all jobIds.");
-        var result = lodash.map(state.approvalRecords, 'jobId');
-        state.set('approvalRecordJobIds', result);
-        done(null, state);
-    }
+                case "CONTAINS":
+                    val = `%${val}`;
+                case "BEGINSWITH":
+                    val = `${val}%`;
+                case "EQ":
+                case "LT":
+                case "LE":
+                case "GT":
+                case "GE":
+                    query.where(field, oper, val);
+                    break;
 
-    function paginateResults(console, state, done) {
+                default:
+                    console.warn("Warning: filterBy Expression ignored:", filterExp);
+                    break;
+            };
+        });
 
-        console.info("Paginating Results.");
-
-        state.set('totalCount', state.approvalRecords.length);
-        state.ensureExists('pageSize', state.totalCount);
-
-        var offset = (state.pageIndex - 1) * state.pageSize;
-
-        var result = state.approvalRecords
-            .slice(offset, offset + state.pageSize);
-
-        state.set('approvalRecords', result);
-
-        done(null, state);
+        return query;
     }
 };
 

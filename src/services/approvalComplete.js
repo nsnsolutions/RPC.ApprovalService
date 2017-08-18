@@ -2,16 +2,14 @@
 
 const lib = require('../lib');
 const rpcUtils = require('rpc-utils');
+const Authorizers = rpcUtils.Principal.Authorizers;
 const async = require('async');
-const rpcfw = require('rpcfw');
 
 module.exports = function ApprovalCompletePlugin(opts) {
 
     var seneca = this,
-        proxy = opts.proxy,
-        env = opts.env,
-        shared = lib.shared(seneca, opts),
-        redis = opts.redisClient,
+        shared = lib.shared.call(seneca, opts),
+        models = opts.models,
         logLevel = opts.logLevel;
 
     seneca.rpcAdd('role:approvalService.Pub,cmd:finalizeApprovalRequest.v1', finalizeApprovalRequest_v1);
@@ -22,73 +20,54 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
     function finalizeApprovalRequest_v1(args, rpcDone) {
 
+        /*
+         * Finalize an approval request.
+         *
+         * Args:
+         * - jobIds: An array of jobs to finzlize.
+         * - disposition: once of: approved, declined
+         * - comments: string comments to associate with the dispossition
+         *   (optional)
+         */
+
         var params = {
-            logLevel: args.get("logLevel", logLevel),
-            repr: lib.repr.FinalizeResponseEntity_v1,
+
             name: "Finalize Approval Request (v1)",
             code: "FAR01",
-            done: rpcDone
+            repr: lib.repr.FinalizeResponseEntity_v1,
+
+            authorizer: Authorizers.with('JOB:30'),
+
+            transport: seneca,
+            logLevel: args.get("logLevel", logLevel),
+            done: rpcDone,
+
+            required: [
+                { field: 'jobIds', type: Array },
+                { field: 'disposition', type: String,
+                  customValidator: (o)=>lib.disposition.hasOwnProperty(o.toLowerCase()) }
+            ],
+
+            optional: [
+                { field: 'comments', type: String }
+            ],
+
+            tasks: [
+                fetchApprovalRecords,
+                shared.addPersonAsApprover,
+                updateApprovalRecords,
+                updateApprovalMetrics,
+            ],
+
+            postActions: [
+                finalizeJob
+            ]
         }
 
-        params.tasks = [
-            shared.getAuthorityFromToken,
-            validate,
-            fetchApprovalRecords,
-            updateApprovalRecords,
-            updateApprovalMetrics,
-            shared.addPersonAsApprover,
-            finalizeJob
-        ];
+        rpcUtils.Workflow
+            .Executor(params)
+            .run(args);
 
-        rpcUtils.Executor(params).run(args);
-
-    }
-
-    function validate(console, state, done) {
-
-        console.info("Validating client request.");
-
-        if(!state.has('person', Object))
-            return done({
-                name: "internalError",
-                message: "Failed to load authority." });
-
-        else if(!state.person.hasAuthority('JOB:30'))
-            return done({
-                name: "forbidden",
-                message: "Unable to complete request: Insufficient privileges" });
-
-        else if(!state.has('jobIds'))
-            return done({
-                name: "badRequest",
-                message: "Missing required field: jobIds" });
-
-        else if(!state.has('jobIds', Array))
-            return done({
-                name: "badRequest",
-                message: 'Wrong type for field: jobIds. Expected: Array' });
-
-        else if(!state.has('disposition'))
-            return done({
-                name: "badRequest",
-                message: "Missing required field: disposition" });
-
-        else if(!state.has('disposition', String))
-            return done({
-                name: "badRequest",
-                message: 'Wrong type for field: disposition. Expected: String' });
-
-        else if(["approved", "declined"].indexOf(state.disposition) < 0)
-            return done({
-                name: "badRequest",
-                message: 'Invalid value for field: disposition. Expected: approved or declined' });
-
-        else if(state.has('comments') && !state.has('comments', String))
-            return done({
-                name: "badRequest",
-                message: 'Wrong type for field: comments. Expected: String' });
-
-        done(null, state);
     }
 
     function fetchApprovalRecords(console, state, done) {
@@ -99,8 +78,8 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
             (jobId, next) => {
 
-                var _state = new rpcfw.verifiableObject({
-                    person: state.person,
+                var _state = new rpcUtils.VerifiableObject({
+                    "$principal": state.$principal,
                     jobId: jobId
                 });
 
@@ -132,30 +111,40 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
             (record, next) => {
 
-                if(record.disposition !== lib.disposition.PENDING)
+                if(record.get('disposition') !== lib.disposition.PENDING)
                     return next(null, {
-                        jobId: record.jobId,
+                        jobId: record.get('jobId'),
                         success: false,
                         message: "Record already finalized." });
 
-                record.comments = state.comments;
-                record.disposition = lib.disposition[state.disposition];
-                record.completeDate = rpcUtils.helpers.fmtDate();
-                record.completedBy = state.person;
-                record.$save({ logLevel: console.level }, (err) => {
+                record.set('comments', state.comments);
+                record.set('disposition', lib.disposition[state.disposition.toLowerCase()]);
+                record.set('approverId', state.approverRecord.id)
+                record.set('completed_at', rpcUtils.helpers.fmtDate());
 
-                    if(err)
-                        return next(null, {
-                            jobId: record.jobId,
-                            success: false,
-                            message: err.message });
-
-                    completedApprovalRecords.push(record);
-
-                    next(null, {
-                        jobId: record.jobId,
-                        success: true,
-                        message: "Completed successfully" });
+                // What a mess
+                record.save().then(model=> {
+                    model.refresh({withRelated:['author','approver']}).then(m=> {
+                        completedApprovalRecords.push(m);
+                        next(null, {
+                            jobId: record.get('jobId'),
+                            success: true,
+                            message: "Completed successfully" 
+                        });
+                    }, (err) => {
+                        completedApprovalRecords.push(record);
+                        next(null, {
+                            jobId: record.get('jobId'),
+                            success: true,
+                            message: "Completed successfully"
+                        });
+                    });
+                }, (err) => {
+                    return next(null, {
+                        jobId: record.get('jobId'),
+                        success: false,
+                        message: err.message
+                    });
                 });
             },
 
@@ -164,7 +153,8 @@ module.exports = function ApprovalCompletePlugin(opts) {
                     return done({
                         name: 'internalError',
                         message: 'Failed to finalize approval requests.',
-                        innerError: err });
+                        innerError: err 
+                    });
 
                 state.set('results', results);
                 state.set('approvalRecords', completedApprovalRecords);
@@ -183,8 +173,8 @@ module.exports = function ApprovalCompletePlugin(opts) {
             ? 'incApprovedCount'
             : 'incDeclinedCount';
 
-        var _state = rpcfw.verifiableObject({
-            person: state.person,
+        var _state = rpcUtils.VerifiableObject({
+            $principal: state.$principal,
             count: state.approvalRecords.length
         });
 
@@ -198,55 +188,53 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
         console.info("Finalizing Job.");
 
-        done(null, state);
-
-        /* Do this async - It could take a waile. */
-
         async.map(state.approvalRecords,
 
             (record, next) => {
 
                 var params = {
                     logLevel: console.level,
-                    jobId: record.jobId,
+                    jobId: record.get('jobId'),
                     token: state.token
                 };
 
-                console.log('Job Type = ' + record.type);
+                console.log('Job Type = ' + record.get('type'));
 
-                proxy.jobService.processJob(params, (err, result) => {
+                seneca.$Proxy.jobService.processJob(params, (err, result) => {
                     if(err)
                         console.warn("Failed to finalize job.\n", err);
 
-                    else if(record.disposition === lib.disposition.APPROVED) {
+                    else if(record.get('disposition') === lib.disposition.APPROVED) {
 
-                        var eventType = (record.type == 'email')
+                        var eventType = (record.get('type') == 'email')
                             ? 'EmailJobApproved'
                             : 'PrintJobApproved';
-                        console.log("Raising '" + eventType + "' Event (Background Task)");
+
+                        console.log("Raising '" + eventType + "' Event");
 
                         _raiseEvent(console, {
                             token: params.token,
                             logLevel: params.logLevel,
                             type: eventType,
                             jobId: params.jobId,
-                            comments: record.comments,
+                            comments: record.get('comments'),
                             eventDate: rpcUtils.helpers.fmtDate()
                         });
-                    }
-                    else if(record.disposition === lib.disposition.DECLINED) {
 
-                        var eventType = (record.type == 'email')
+                    } else if(record.get('disposition') === lib.disposition.DECLINED) {
+
+                        var eventType = (record.get('type') == 'email')
                             ? 'EmailJobDeclined'
                             : 'PrintJobDeclined';
-                        console.log("Raising '" + eventType + "' Event (Background Task)");
+
+                        console.log("Raising '" + eventType + "' Event");
 
                         _raiseEvent(console, {
                             token: params.token,
                             logLevel: params.logLevel,
                             type: eventType,
                             jobId: params.jobId,
-                            comments: record.comments,
+                            comments: record.get('comments'),
                             eventDate: rpcUtils.helpers.fmtDate()
                         });
                     }
@@ -256,7 +244,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
             },
 
-            (err, results) => console.log("Completed finalizing jobs.")
+            (err, results) => done(err, state)
         );
     }
 
@@ -264,7 +252,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
 
         console.log(`Raising '${eventParams.type}' Event (Background Task)`);
 
-        proxy.eventService.raiseEvent(eventParams, (err, data) => {
+        seneca.$Proxy.eventService.raiseEvent(eventParams, (err, data) => {
             if(err)
                 console.error("Failed to raise event.\n", err);
             else

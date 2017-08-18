@@ -1,10 +1,11 @@
 'use strict';
 
-module.exports = function fetchApprovalRecordByClient(seneca, opts) {
+module.exports = function fetchApprovalRecordByClient(opts) {
 
-    var shared = this,
-        approvalTable = opts.tables.approval,
-        logLevel = opts.logLevel
+    var seneca = this,
+        redis = opts.redisClient,
+        models = opts.models,
+        logLevel = opts.logLevel;
 
     return handler;
 
@@ -12,31 +13,35 @@ module.exports = function fetchApprovalRecordByClient(seneca, opts) {
 
     function handler(console, state, done) {
 
-        console.info("Fetch Approval Record For Client");
+        models.Request
+            .where({ jobId: state.jobId })
+            .fetch({ withRelated: [ 'author', 'approver' ] })
+            .then(success, error);
 
-        var params = {
-            logLevel: console.level,
-            index: 'clientId-jobId-index',
-            key: {
-                clientId: state.person.clientId,
-                jobId: state.jobId
-            }
-        };
+        function success(model) {
 
-        approvalTable.fetch(params, (err, record) => {
-            if(err)
-                return done({
-                    name: 'internalError',
-                    message: 'Failed to fetch approval record.',
-                    innerError: err });
-
-            else if(!record)
+            if(!model)
                 return done({
                     name: 'notFound',
-                    message: 'JobId not found: ' + state.jobId });
+                    message: 'JobId not found: ' + state.jobId 
+                });
 
-            state.set('approvalRecord', record);
-            done(null, state);
-        });
+            else if(model.relations.author.get('clientId') != state.$principal.clientId)
+                return done({
+                    name: 'notFound',
+                    message: 'JobId not found: ' + state.jobId 
+                });
+
+            state.set('approvalRecord', model);
+            return done(null, state);
+        }
+
+        function error(err) {
+            done({
+                name: 'internalError',
+                message: "Failed to load approval request.",
+                innerError: err.message 
+            });
+        }
     }
 }

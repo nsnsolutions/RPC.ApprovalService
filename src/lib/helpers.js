@@ -1,26 +1,16 @@
 'use strict';
 
+const computeRedisKey = require('rpc-utils').helpers.computeRedisKey;
+
 module.exports = {
     makeMetricKeys: makeMetricKeys,
     makeApproverKeys: makeApproverKeys,
-    makeRedisKeys: makeRedisKeys
 };
 
-function makeMetricKeys(env, keyMap) {
-    return makeRedisKeys("ApprovalMetric", env, keyMap);
+function makeMetricKeys(keyMap) {
+    return computeRedisKey("approvalService", "Metrics", keyMap);
 }
 
-function makeApproverKeys(env, keyMap) {
-    return makeRedisKeys("Approvers", env, keyMap);
-}
-
-function makeRedisKeys(group, env, keyMap) {
-
-    var ret = {};
-
-    for(var prop in keyMap)
-        if(keyMap.hasOwnProperty(prop))
-            ret[prop] = `${group}-${env}:${prop}:${keyMap[prop]}`;
-
-    return ret;
+function makeApproverKeys(keyMap) {
+    return computeRedisKey("approvalService", "Approvers", keyMap);
 }

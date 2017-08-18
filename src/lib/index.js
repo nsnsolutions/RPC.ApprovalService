@@ -5,5 +5,4 @@ module.exports = {
     shared: require('./shared'),
     disposition: require('./disposition'),
     helpers: require('./helpers'),
-    Proxy: require('./Proxy')
 };

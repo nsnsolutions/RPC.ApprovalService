@@ -1,0 +1,137 @@
+{
+    "schema": {
+
+        "person": {
+
+            "columns": [
+                { 
+                    "name": "id",
+                    "type": "varchar",
+                    "length": 128,
+                    "primary_key": true,
+                    "nullable": false,
+                    "unique": true
+                }, {
+                    "name": "sponsorId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "clientId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "fullName",
+                    "type": "varchar",
+                    "length": 256,
+                    "nullable": false
+                }, {
+                    "name": "email",
+                    "type": "varchar",
+                    "length": 256,
+                    "nullable": false
+                }, {
+                    "name": "isApprover",
+                    "type": "boolean",
+                    "nullable": false,
+                    "default": false
+                }
+            ],
+
+            "indexes": [
+                {
+                    "name": "idx_person_sponsorId" ,
+                    "columns": "sponsorId"
+                },{
+                    "name": "idx_person_clientId" ,
+                    "columns": [ "sponsorId", "clientId" ]
+                },{
+                    "name": "idx_person_approver" ,
+                    "columns": "isApprover"
+                }
+            ]
+        },
+
+        "request": {
+            "columns": [
+                { 
+                    "name": "jobId",
+                    "type": "varchar",
+                    "length": 128,
+                    "primary_key": true,
+                    "unique": true,
+                    "nullable": false
+                }, { 
+                    "name": "type",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, { 
+                    "name": "jobUniqueId",
+                    "type": "varchar",
+                    "length": 128
+                }, { 
+                    "name": "title",
+                    "type": "varchar",
+                    "length": 512
+                }, { 
+                    "name": "price",
+                    "type": "decimal",
+                    "percision": 16,
+                    "scale": 2
+                }, { 
+                    "name": "quantity",
+                    "type": "integer",
+                    "nullable": false,
+                    "default": 0
+                }, {
+                    "name": "disposition",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, { 
+                    "name": "comments",
+                    "type": "varchar",
+                    "length": 1024
+                }, {
+                    "name": "authorId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": false
+                }, {
+                    "name": "approverId",
+                    "type": "varchar",
+                    "length": 128,
+                    "nullable": true
+                }, {
+                    "name": "completed_at",
+                    "type": "dateTime",
+                    "nullable": true
+                }
+
+            ],
+
+            "indexes": [
+                {
+                    "name": "idx_approval_jobId" ,
+                    "columns": "jobId"
+                }
+            ],
+
+            "foreign_keys": [
+                {
+                    "columns": "authorId",
+                    "foreign_table": "person",
+                    "foreign_columns": "id"
+                }, {
+                    "columns": "approverId",
+                    "foreign_table": "person",
+                    "foreign_columns": "id"
+                }
+            ],
+
+            "timestamps": true
+        }
+    }
+}
