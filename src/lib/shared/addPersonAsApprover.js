@@ -18,8 +18,8 @@ module.exports = function addPersonAsApprover(opts) {
         console.info("Adding user as approver.");
 
         models.Person.forge({
-            id: helpers.principal2key($principal),
-            userId: $principal.userId,
+            id: helpers.principal2key(state.$principal),
+            userId: state.$principal.userId,
             sponsorId: state.$principal.sponsorId,
             clientId: state.$principal.clientId,
             fullName: state.$principal.fullName,
