@@ -217,7 +217,7 @@ module.exports = function ApprovalCompletePlugin(opts) {
                             logLevel: params.logLevel,
                             type: eventType,
                             jobId: params.jobId,
-                            comments: record.get('comments') || "",
+                            //comments: record.get('comments'),
                             eventDate: rpcUtils.helpers.fmtDate()
                         });
 
